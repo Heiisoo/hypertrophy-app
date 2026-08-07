@@ -34,14 +34,11 @@
 .brand-mark {
   width: 52px;
   height: 52px;
-  display: grid;
-  place-items: center;
+  display: block;
   border: 1px solid rgb(184 165 138 / 38%);
   border-radius: 16px;
-  color: var(--color-champagne);
   background: linear-gradient(145deg, #282628, #151516);
-  font-size: 1.05rem;
-  font-weight: 800;
+  object-fit: cover;
 }
 h1 {
   max-width: 440px;
@@ -61,6 +58,29 @@ form {
   display: grid;
   gap: 12px;
 }
+.auth-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 15px;
+  background: rgb(255 255 255 / 2%);
+}
+.auth-modes button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--color-muted);
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.auth-modes button.active {
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: 0 5px 20px rgb(0 0 0 / 24%);
+}
 label {
   color: var(--color-silver);
   font-size: 0.72rem;
@@ -79,6 +99,26 @@ input {
 input:focus {
   border-color: rgb(184 165 138 / 50%);
   box-shadow: 0 0 0 3px rgb(184 165 138 / 8%);
+}
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 82px;
+}
+.password-field button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 8%);
+  font-size: 0.61rem;
+  font-weight: 800;
+  transform: translateY(-50%);
 }
 button:disabled {
   opacity: 0.55;
@@ -124,6 +164,29 @@ button:disabled {
   color: var(--color-silver);
   background: transparent;
   font-weight: 700;
+}
+.text-button {
+  justify-self: center;
+  border: 0;
+  color: var(--color-champagne);
+  background: transparent;
+  font-size: 0.7rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-silver-dark);
+  font-size: 0.62rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  flex: 1;
+  background: rgb(255 255 255 / 7%);
+  content: '';
 }
 .feedback {
   padding: 12px 14px;

@@ -4,7 +4,7 @@
   </a>
 
   <section class="auth-content">
-    <div class="brand-mark">H</div>
+    <img class="brand-mark" src="/icons/icon-192x192.png" alt="" />
     <div>
       <p class="eyebrow">Sauvegarde cloud</p>
       <h1>{{ auth.isAuthenticated() ? 'Compte connecté.' : 'Tes performances, partout.' }}</h1>
@@ -12,11 +12,18 @@
         @if (auth.isAuthenticated()) {
           Ton historique local est synchronisé avec Supabase dès que le réseau est disponible.
         } @else {
-          L’app reste utilisable sans réseau. Une adresse e-mail crée un espace personnel : chacun
-          retrouve uniquement ses séances, ses statistiques et son programme.
+          Connecte-toi directement depuis cette application avec ton e-mail et ton mot de passe. Ton
+          espace restera bien associé à la PWA installée.
         }
       </p>
     </div>
+
+    @if (confirmationNotice) {
+      <p class="feedback success">
+        Adresse confirmée. Retourne maintenant dans l’app installée et connecte-toi avec ton mot de
+        passe.
+      </p>
+    }
 
     @if (auth.isAuthenticated()) {
       <article class="account-card">
@@ -34,6 +41,27 @@
       </button>
       <button class="secondary-button" type="button" (click)="signOut()">Se déconnecter</button>
     } @else {
+      <div class="auth-modes" role="tablist" aria-label="Type de connexion">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="mode() === 'signin'"
+          [class.active]="mode() === 'signin'"
+          (click)="setMode('signin')"
+        >
+          Se connecter
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="mode() === 'signup'"
+          [class.active]="mode() === 'signup'"
+          (click)="setMode('signup')"
+        >
+          Créer un compte
+        </button>
+      </div>
+
       <form (submit)="$event.preventDefault(); submit()">
         <label for="email">Adresse e-mail</label>
         <input
@@ -45,19 +73,78 @@
           [value]="email()"
           (input)="email.set($any($event.target).value)"
         />
+
+        <label for="password">Mot de passe</label>
+        <div class="password-field">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            [autocomplete]="mode() === 'signup' ? 'new-password' : 'current-password'"
+            minlength="8"
+            placeholder="8 caractères minimum"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+          />
+          <button
+            type="button"
+            [attr.aria-label]="
+              showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+            "
+            (click)="showPassword.update((value) => !value)"
+          >
+            {{ showPassword() ? 'Masquer' : 'Afficher' }}
+          </button>
+        </div>
+
+        @if (mode() === 'signup') {
+          <label for="password-confirmation">Confirmer le mot de passe</label>
+          <input
+            id="password-confirmation"
+            [type]="showPassword() ? 'text' : 'password'"
+            autocomplete="new-password"
+            minlength="8"
+            placeholder="Répète ton mot de passe"
+            [value]="passwordConfirmation()"
+            (input)="passwordConfirmation.set($any($event.target).value)"
+          />
+        }
+
         <button class="primary-button" type="submit" [disabled]="auth.loading()">
-          {{ auth.loading() ? 'Connexion…' : 'Recevoir mon lien sécurisé' }}
+          {{
+            auth.loading()
+              ? 'Patiente…'
+              : mode() === 'signup'
+                ? 'Créer mon espace privé'
+                : 'Se connecter à mon espace'
+          }}
         </button>
       </form>
+
+      @if (mode() === 'signin') {
+        <button class="text-button" type="button" (click)="resetPassword()">
+          Mot de passe oublié ou jamais créé ?
+        </button>
+      }
+
       @if (auth.message()) {
         <p class="feedback success">{{ auth.message() }}</p>
       }
       @if (auth.error()) {
         <p class="feedback error">{{ auth.error() }}</p>
       }
+
+      <div class="auth-divider"><span>ou en secours</span></div>
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="auth.loading()"
+        (click)="sendMagicLink()"
+      >
+        Recevoir un lien magique
+      </button>
       <p class="privacy">
-        Aucun mot de passe à retenir. Le lien sécurisé ouvre ton espace privé sur
-        training.damienvignes.com.
+        Sur iPhone, un lien reçu par e-mail peut s’ouvrir dans Safari au lieu de la PWA. La
+        connexion par mot de passe ci-dessus évite ce problème au quotidien.
       </p>
     }
 

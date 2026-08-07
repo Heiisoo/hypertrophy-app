@@ -1,6 +1,6 @@
 <main class="welcome-page">
   <section class="welcome-hero">
-    <span class="brand-mark">H</span>
+    <img class="brand-mark" src="/icons/icon-192x192.png" alt="" />
     <p class="eyebrow">Bienvenue sur Hypertrophy</p>
     <h1>Ton entraînement.<br /><span>Pas celui d’un autre.</span></h1>
     <p>
@@ -10,12 +10,16 @@
   </section>
 
   <section class="welcome-actions surface-card">
-    <a class="primary-button" routerLink="/connexion">Créer mon compte</a>
+    <a class="primary-button" routerLink="/connexion" [queryParams]="{ mode: 'signup' }">
+      Créer mon compte
+    </a>
     <button type="button" (click)="useRecommendation()">
       <strong>Découvrir un programme recommandé</strong>
       <span>Une base de 8 jours dont la durée et les exercices sont entièrement modifiables.</span>
     </button>
-    <small>Le programme recommandé est un modèle public. Il ne contient aucune donnée de Damien.</small>
+    <small
+      >Le programme recommandé est un modèle public. Il ne contient aucune donnée de Damien.</small
+    >
   </section>
 
   <p class="privacy-note">Chaque adresse e-mail ouvre un espace privé différent.</p>
