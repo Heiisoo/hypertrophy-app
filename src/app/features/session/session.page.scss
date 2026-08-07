@@ -36,6 +36,9 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.session-header > div span.ready {
+  color: var(--color-champagne);
+}
 .session-header > div strong {
   font:
     700 0.9rem/1 'Avenir Next',
@@ -51,6 +54,64 @@
   background: rgb(90 46 36 / 18%);
   font-size: 0.7rem;
   font-weight: 800;
+}
+.header-spacer {
+  width: 68px;
+}
+
+.session-start-card {
+  display: grid;
+  gap: 18px;
+  padding: 26px 22px 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 95% 0%, rgb(122 52 40 / 28%), transparent 42%),
+    linear-gradient(145deg, rgb(31 31 34 / 98%), rgb(19 18 19 / 99%));
+}
+.session-start-card h1 {
+  max-width: 430px;
+  margin-top: -4px;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.055em;
+}
+.session-start-card > p {
+  max-width: 390px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+.start-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.start-metrics span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 8px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 13px;
+  color: var(--color-muted);
+  background: rgb(0 0 0 / 13%);
+  font-size: 0.59rem;
+  text-align: center;
+}
+.start-metrics strong {
+  color: var(--color-silver);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.session-start-card .primary-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.session-start-card > small {
+  color: var(--color-silver-dark);
+  font-size: 0.61rem;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .session-title h1 {

@@ -32,6 +32,10 @@ export class WorkoutSessionService implements OnDestroy {
     clearInterval(this.timerId);
   }
 
+  async whenReady(): Promise<void> {
+    await this.hydration;
+  }
+
   async start(programDayId: string): Promise<WorkoutSession> {
     await this.hydration;
     const current = this.activeSession();
