@@ -36,8 +36,14 @@ export class HomePage {
     return days[nextIndex];
   });
 
-  protected async startSession(): Promise<void> {
-    await this.workout.start(this.store.today().id);
+  protected async openSession(): Promise<void> {
+    const activeSession = this.workout.activeSession();
+    await this.router.navigate(['/seance'], {
+      queryParams: activeSession ? undefined : { day: this.store.today().id },
+    });
+  }
+
+  protected async chooseSession(): Promise<void> {
     await this.router.navigate(['/seance']);
   }
 }

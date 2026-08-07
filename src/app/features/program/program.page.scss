@@ -21,6 +21,18 @@
   border-radius: 14px;
   background: var(--color-surface);
 }
+.page-header .edit-toggle {
+  width: auto;
+  padding: 0 14px;
+  color: var(--color-silver);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.page-header .edit-toggle.active {
+  border-color: rgb(122 52 40 / 50%);
+  color: #f1dfda;
+  background: rgb(90 46 36 / 28%);
+}
 .page-header svg {
   width: 21px;
   fill: var(--color-silver);
@@ -83,6 +95,46 @@
 }
 .summary-meta strong {
   color: var(--color-silver);
+}
+.restore-button {
+  position: relative;
+  z-index: 1;
+  min-height: 42px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  color: var(--color-muted);
+  background: rgb(255 255 255 / 2%);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.edit-field {
+  display: grid;
+  gap: 7px;
+}
+.edit-field > span {
+  color: var(--color-muted);
+  font-size: 0.61rem;
+  font-weight: 700;
+}
+.edit-field input,
+.edit-field textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 11px;
+  outline: none;
+  color: var(--color-text);
+  background: rgb(0 0 0 / 20%);
+  font: inherit;
+  font-size: 0.76rem;
+}
+.edit-field input:focus,
+.edit-field textarea:focus {
+  border-color: rgb(184 165 138 / 48%);
+}
+.edit-field textarea {
+  resize: vertical;
 }
 
 .list-heading {
@@ -180,6 +232,18 @@
 .day-content {
   padding: 0 15px 16px 72px;
 }
+.day-editor {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid rgb(184 165 138 / 12%);
+  border-radius: 14px;
+  background: rgb(184 165 138 / 4%);
+}
+.compact-field {
+  max-width: 160px;
+}
 .focus {
   margin-bottom: 14px;
   color: var(--color-champagne);
@@ -221,6 +285,46 @@
   color: var(--color-silver);
   font-size: 0.68rem;
 }
+.exercise-actions {
+  grid-column: 2 / -1;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px !important;
+  padding-top: 5px;
+}
+.exercise-actions button,
+.day-actions button,
+.day-actions a {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 9px;
+  color: var(--color-silver);
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.61rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.exercise-actions button:disabled {
+  opacity: 0.3;
+}
+.exercise-actions .danger {
+  color: #d9a59a;
+  border-color: rgb(122 52 40 / 28%);
+}
+.day-actions {
+  display: grid;
+  margin-top: 14px;
+}
+.day-actions button,
+.day-actions a {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-color: rgb(122 52 40 / 42%);
+  color: #f1dfda;
+  background: rgb(90 46 36 / 22%);
+}
 .recovery-list {
   display: grid;
   gap: 9px;
@@ -236,6 +340,69 @@
   content: '—';
   margin-right: 9px;
   color: var(--color-champagne);
+}
+
+.editor-backdrop {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  padding: 20px 20px calc(22px + env(safe-area-inset-bottom));
+  background: rgb(0 0 0 / 70%);
+  backdrop-filter: blur(8px);
+}
+.exercise-editor {
+  width: min(100%, 520px);
+  max-height: min(88vh, 760px);
+  display: grid;
+  gap: 14px;
+  padding: 21px;
+  overflow-y: auto;
+}
+.editor-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 15px;
+}
+.editor-heading h2 {
+  margin-top: 6px;
+  font-size: 1.35rem;
+}
+.editor-heading > button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 11px;
+  color: var(--color-silver);
+  background: rgb(255 255 255 / 3%);
+  font-size: 1.2rem;
+}
+.editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.editor-footer {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 9px;
+  margin-top: 4px;
+}
+.editor-footer button {
+  min-height: 46px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 13px;
+  color: var(--color-silver);
+  background: rgb(255 255 255 / 4%);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.editor-footer .save-button {
+  border-color: rgb(122 52 40 / 50%);
+  color: #fff3ef;
+  background: linear-gradient(135deg, #854034, #5a2e24);
 }
 
 @media (max-width: 380px) {

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import {
+  LocalUserProgram,
   SyncQueueItem,
   TrainingProgram,
   WorkoutSession,
@@ -12,6 +13,7 @@ export class HypertrophyDatabase extends Dexie {
   workoutSessions!: Table<WorkoutSession, string>;
   workoutSets!: Table<WorkoutSet, string>;
   syncQueue!: Table<SyncQueueItem, number>;
+  userPrograms!: Table<LocalUserProgram, string>;
 
   constructor() {
     super('hypertrophy-app');
@@ -21,6 +23,14 @@ export class HypertrophyDatabase extends Dexie {
       workoutSessions: 'id, programDayId, startedAt, status',
       workoutSets: 'id, sessionId, exerciseId, completedAt',
       syncQueue: '++id, entityType, entityId, status, createdAt',
+    });
+
+    this.version(2).stores({
+      programs: 'id, active, createdAt',
+      workoutSessions: 'id, programDayId, startedAt, status',
+      workoutSets: 'id, sessionId, exerciseId, completedAt',
+      syncQueue: '++id, entityType, entityId, status, createdAt',
+      userPrograms: 'ownerId, updatedAt',
     });
   }
 

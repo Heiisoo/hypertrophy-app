@@ -4,12 +4,13 @@
       <p class="eyebrow">Cycle actif · 7 jours</p>
       <h1>Programme</h1>
     </div>
-    <button type="button" aria-label="Options du programme">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="5" cy="12" r="1" />
-        <circle cx="12" cy="12" r="1" />
-        <circle cx="19" cy="12" r="1" />
-      </svg>
+    <button
+      class="edit-toggle"
+      type="button"
+      [class.active]="editing()"
+      (click)="toggleEditing()"
+    >
+      {{ editing() ? 'Terminer' : 'Personnaliser' }}
     </button>
   </header>
 
@@ -17,13 +18,38 @@
     <div class="summary-number">01</div>
     <div>
       <span class="eyebrow">Programme principal</span>
-      <h2>{{ store.program().name }}</h2>
-      <p>{{ store.program().description }}</p>
+      @if (editing()) {
+        <label class="edit-field">
+          <span>Nom du programme</span>
+          <input
+            type="text"
+            [value]="store.program().name"
+            (change)="updateProgramField('name', $any($event.target).value)"
+          />
+        </label>
+        <label class="edit-field">
+          <span>Description</span>
+          <textarea
+            rows="3"
+            [value]="store.program().description"
+            (change)="updateProgramField('description', $any($event.target).value)"
+          ></textarea>
+        </label>
+      } @else {
+        <h2>{{ store.program().name }}</h2>
+        <p>{{ store.program().description }}</p>
+      }
     </div>
     <div class="summary-meta">
       <span><strong>6</strong> entraînements</span>
       <span><strong>1</strong> récupération</span>
+      <span>{{ store.saving() ? 'Enregistrement…' : store.saveLabel() }}</span>
     </div>
+    @if (editing()) {
+      <button class="restore-button" type="button" (click)="restoreDefault()">
+        Restaurer le programme initial
+      </button>
+    }
   </article>
 
   <div class="list-heading">
@@ -46,11 +72,13 @@
         >
           <span class="day-index">{{ day.dayNumber.toString().padStart(2, '0') }}</span>
           <span class="day-title">
-            <small>{{
-              day.kind === 'recovery'
-                ? 'Récupération'
-                : day.exercises.length + ' exercices · ~' + day.durationMinutes + ' min'
-            }}</small>
+            <small>
+              {{
+                day.kind === 'recovery'
+                  ? 'Récupération'
+                  : day.exercises.length + ' exercices · ~' + day.durationMinutes + ' min'
+              }}
+            </small>
             <strong>{{ day.title }}</strong>
           </span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
@@ -58,7 +86,39 @@
 
         @if (expandedDayId() === day.id) {
           <div class="day-content">
-            <p class="focus">{{ day.focus }}</p>
+            @if (editing()) {
+              <div class="day-editor">
+                <label class="edit-field">
+                  <span>Nom de la journée</span>
+                  <input
+                    type="text"
+                    [value]="day.title"
+                    (change)="updateDayField(day, 'title', $any($event.target).value)"
+                  />
+                </label>
+                <label class="edit-field">
+                  <span>Objectif</span>
+                  <input
+                    type="text"
+                    [value]="day.focus"
+                    (change)="updateDayField(day, 'focus', $any($event.target).value)"
+                  />
+                </label>
+                <label class="edit-field compact-field">
+                  <span>Durée prévue (min)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    inputmode="numeric"
+                    [value]="day.durationMinutes"
+                    (change)="updateDayField(day, 'durationMinutes', $any($event.target).value)"
+                  />
+                </label>
+              </div>
+            } @else {
+              <p class="focus">{{ day.focus }}</p>
+            }
+
             @if (day.kind === 'training') {
               <div class="exercise-list">
                 @for (exercise of day.exercises; track exercise.id; let index = $index) {
@@ -70,12 +130,39 @@
                     </div>
                     <div class="prescription">
                       <strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong>
-                      <small
-                        >RIR {{ exercise.targetRir }} ·
-                        {{ formatRest(exercise.restSeconds) }}</small
-                      >
+                      <small>RIR {{ exercise.targetRir }} · {{ formatRest(exercise.restSeconds) }}</small>
                     </div>
+                    @if (editing()) {
+                      <div class="exercise-actions">
+                        <button
+                          type="button"
+                          aria-label="Monter l'exercice"
+                          [disabled]="$first"
+                          (click)="store.moveExercise(day.id, exercise.id, -1)"
+                        >↑</button>
+                        <button
+                          type="button"
+                          aria-label="Descendre l'exercice"
+                          [disabled]="$last"
+                          (click)="store.moveExercise(day.id, exercise.id, 1)"
+                        >↓</button>
+                        <button type="button" (click)="openEditor(day.id, exercise)">Modifier</button>
+                        <button class="danger" type="button" (click)="removeExercise(day.id, exercise)">
+                          Supprimer
+                        </button>
+                      </div>
+                    }
                   </div>
+                }
+              </div>
+
+              <div class="day-actions">
+                @if (editing()) {
+                  <button type="button" (click)="addExercise(day.id)">+ Ajouter un exercice</button>
+                } @else {
+                  <a [routerLink]="['/seance']" [queryParams]="{ day: day.id }">
+                    Choisir cette séance
+                  </a>
                 }
               </div>
             } @else {
@@ -91,3 +178,94 @@
     }
   </div>
 </section>
+
+@if (editor(); as currentEditor) {
+  @if (draft(); as currentDraft) {
+    <div class="editor-backdrop" role="presentation" (click)="closeEditor()">
+      <section
+        class="exercise-editor surface-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-editor-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="editor-heading">
+          <div>
+            <span class="eyebrow">Personnalisation</span>
+            <h2 id="exercise-editor-title">Modifier l'exercice</h2>
+          </div>
+          <button type="button" aria-label="Fermer" (click)="closeEditor()">×</button>
+        </div>
+
+        <label class="edit-field">
+          <span>Nom</span>
+          <input
+            type="text"
+            [value]="currentDraft.name"
+            (input)="updateDraft('name', $any($event.target).value)"
+          />
+        </label>
+        <label class="edit-field">
+          <span>Groupe musculaire</span>
+          <input
+            type="text"
+            [value]="currentDraft.category"
+            (input)="updateDraft('category', $any($event.target).value)"
+          />
+        </label>
+
+        <div class="editor-grid">
+          <label class="edit-field">
+            <span>Séries</span>
+            <input
+              type="number"
+              min="1"
+              inputmode="numeric"
+              [value]="currentDraft.sets"
+              (input)="updateDraft('sets', $any($event.target).value)"
+            />
+          </label>
+          <label class="edit-field">
+            <span>Répétitions</span>
+            <input
+              type="text"
+              [value]="currentDraft.repRange"
+              (input)="updateDraft('repRange', $any($event.target).value)"
+            />
+          </label>
+          <label class="edit-field">
+            <span>RIR cible</span>
+            <input
+              type="text"
+              [value]="currentDraft.targetRir"
+              (input)="updateDraft('targetRir', $any($event.target).value)"
+            />
+          </label>
+          <label class="edit-field">
+            <span>Repos (secondes)</span>
+            <input
+              type="number"
+              min="1"
+              inputmode="numeric"
+              [value]="currentDraft.restSeconds"
+              (input)="updateDraft('restSeconds', $any($event.target).value)"
+            />
+          </label>
+        </div>
+        <label class="edit-field">
+          <span>Conseil technique (optionnel)</span>
+          <textarea
+            rows="3"
+            [value]="currentDraft.cue"
+            (input)="updateDraft('cue', $any($event.target).value)"
+          ></textarea>
+        </label>
+
+        <div class="editor-footer">
+          <button type="button" (click)="closeEditor()">Annuler</button>
+          <button class="save-button" type="button" (click)="saveExercise()">Enregistrer</button>
+        </div>
+      </section>
+    </div>
+  }
+}

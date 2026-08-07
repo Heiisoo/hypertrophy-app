@@ -181,6 +181,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_programs: {
+        Row: {
+          created_at: string;
+          program: Json;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          program: Json;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          program?: Json;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       workout_sessions: {
         Row: {
           created_at: string;
@@ -269,13 +290,6 @@ export type Database = {
           weight_kg?: number;
         };
         Relationships: [
-          {
-            foreignKeyName: 'workout_sets_exercise_id_fkey';
-            columns: ['exercise_id'];
-            isOneToOne: false;
-            referencedRelation: 'exercises';
-            referencedColumns: ['id'];
-          },
           {
             foreignKeyName: 'workout_sets_session_id_user_id_fkey';
             columns: ['session_id', 'user_id'];
