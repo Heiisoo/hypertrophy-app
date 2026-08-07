@@ -1,0 +1,27 @@
+<div class="app-frame">
+  <main class="app-content">
+    <router-outlet />
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navigation principale">
+    <a routerLink="/accueil" routerLinkActive="active" aria-label="Accueil">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />
+      </svg>
+      <span>Accueil</span>
+    </a>
+    <a routerLink="/seance" routerLinkActive="active" aria-label="Séance">
+      <span class="session-icon"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 8v8M3 10v4m15-6v8m3-6v4M6 12h12" /></svg
+      ></span>
+      <span>Séance</span>
+    </a>
+    <a routerLink="/programme" routerLinkActive="active" aria-label="Programme">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 5h16M4 12h16M4 19h16M7 3v4m10-4v4" />
+      </svg>
+      <span>Programme</span>
+    </a>
+  </nav>
+</div>

@@ -1,0 +1,302 @@
+.home-page {
+  display: grid;
+  gap: 26px;
+}
+.topbar,
+.card-topline,
+.section-heading,
+.next-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font:
+    800 0.78rem/1 'Avenir Next',
+    sans-serif;
+  letter-spacing: 0.13em;
+  text-decoration: none;
+}
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(184 165 138 / 40%);
+  border-radius: 10px;
+  color: var(--color-champagne);
+  background: linear-gradient(145deg, #282628, #151516);
+  font-size: 0.86rem;
+}
+
+.local-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 0.69rem;
+  text-decoration: none;
+}
+.local-badge span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-silver-dark);
+  box-shadow: 0 0 0 3px rgb(110 110 114 / 13%);
+}
+.local-badge.ready span {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px rgb(103 185 140 / 13%);
+}
+.local-badge.cloud {
+  color: var(--color-silver);
+}
+
+.welcome {
+  padding-top: 6px;
+}
+.welcome .date {
+  margin-bottom: 6px;
+  text-transform: capitalize;
+  font-size: 0.86rem;
+}
+.welcome h1 {
+  font-size: clamp(2.6rem, 12vw, 4.2rem);
+  line-height: 0.97;
+  letter-spacing: -0.065em;
+}
+.welcome h1 span {
+  color: var(--color-silver-dark);
+}
+
+.today-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+}
+.today-glow {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  top: -120px;
+  right: -80px;
+  border-radius: 50%;
+  background: rgb(122 52 40 / 24%);
+  filter: blur(34px);
+  pointer-events: none;
+}
+.card-topline {
+  position: relative;
+}
+.status-dot {
+  padding: 6px 9px;
+  border: 1px solid rgb(184 165 138 / 18%);
+  border-radius: 999px;
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 6%);
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+.today-card h2 {
+  position: relative;
+  max-width: 360px;
+  margin-top: 24px;
+  font-size: clamp(1.72rem, 7vw, 2.35rem);
+  line-height: 1.07;
+  letter-spacing: -0.04em;
+}
+.today-card > p {
+  position: relative;
+  margin-top: 9px;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.metrics {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 24px 0 20px;
+  padding: 15px 0;
+  border-block: 1px solid rgb(255 255 255 / 7%);
+}
+.metrics div {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+.metrics div + div {
+  border-left: 1px solid rgb(255 255 255 / 7%);
+}
+.metrics strong {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 1.08rem;
+}
+.metrics span {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+.primary-button svg {
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.recovery-callout {
+  display: grid;
+  gap: 5px;
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgb(184 165 138 / 8%);
+}
+.recovery-callout span {
+  color: var(--color-champagne);
+  font-size: 0.72rem;
+}
+
+.section-block {
+  display: grid;
+  gap: 12px;
+}
+.section-heading h2 {
+  margin-top: 3px;
+  font-size: 1.35rem;
+}
+.section-heading > span {
+  color: var(--color-silver);
+  font:
+    700 0.8rem/1 'Avenir Next',
+    sans-serif;
+}
+.week-card {
+  padding: 18px;
+}
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+.week-days div {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 0.64rem;
+}
+.week-days i {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 10px;
+  color: transparent;
+  background: rgb(255 255 255 / 2%);
+  font-style: normal;
+  font-weight: 800;
+}
+.week-days .done i {
+  color: #e8e0dd;
+  border-color: rgb(122 52 40 / 50%);
+  background: var(--color-brown);
+}
+.week-days .rest i {
+  color: var(--color-silver-dark);
+  background: transparent;
+}
+.week-days .current i {
+  outline: 2px solid rgb(184 165 138 / 32%);
+  outline-offset: 2px;
+}
+.progress-track {
+  height: 4px;
+  margin-top: 18px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 6%);
+}
+.progress-track span {
+  display: block;
+  width: 50%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-brown), var(--color-champagne));
+}
+.week-card p {
+  margin-top: 10px;
+  color: var(--color-muted);
+  font-size: 0.73rem;
+}
+.week-card p strong {
+  color: var(--color-silver);
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stat-card {
+  min-width: 0;
+  padding: 17px;
+}
+.stat-icon {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 15px;
+  border-radius: 9px;
+  color: #e3cbc4;
+  background: rgb(122 52 40 / 24%);
+  font-weight: 800;
+}
+.stat-icon.champagne {
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 10%);
+}
+.stat-card p {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+.stat-card strong {
+  display: block;
+  margin-top: 5px;
+  font:
+    800 1.24rem/1.1 'Avenir Next',
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.stat-card small {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--color-silver-dark);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next-card {
+  gap: 18px;
+  padding: 5px 2px;
+  color: inherit;
+  text-decoration: none;
+}
+.next-card div {
+  display: grid;
+  gap: 7px;
+}
+.next-card strong {
+  font-size: 0.83rem;
+}
+.next-card > span {
+  color: var(--color-champagne);
+  font-size: 1.3rem;
+}

@@ -1,0 +1,200 @@
+<section class="page session-page">
+  <header class="session-header">
+    <a routerLink="/accueil" aria-label="Retour à l'accueil">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+    </a>
+    <div><span>En cours</span><strong>00:18:42</strong></div>
+    <button type="button" (click)="finishSession()">Terminer</button>
+  </header>
+
+  <div class="session-title">
+    <p class="eyebrow">Jour {{ day().dayNumber }} · {{ day().exercises.length }} exercices</p>
+    <h1>{{ day().title }}</h1>
+    <div class="global-progress">
+      <span
+        [style.width.%]="
+          ((activeExerciseIndex() + progress() / 100) / day().exercises.length) * 100
+        "
+      ></span>
+    </div>
+  </div>
+
+  <div class="exercise-tabs" role="group" aria-label="Exercices de la séance">
+    @for (exercise of day().exercises; track exercise.id; let index = $index) {
+      <button
+        type="button"
+        [class.active]="index === activeExerciseIndex()"
+        (click)="selectExercise(index)"
+      >
+        <span>{{ (index + 1).toString().padStart(2, '0') }}</span>
+        <small>{{ exercise.name }}</small>
+      </button>
+    }
+  </div>
+
+  @if (activeExercise(); as exercise) {
+    <article class="exercise-card surface-card">
+      <header>
+        <div class="exercise-number">
+          {{ (activeExerciseIndex() + 1).toString().padStart(2, '0') }}
+        </div>
+        <div>
+          <span class="eyebrow">{{ exercise.category }}</span>
+          <h2>{{ exercise.name }}</h2>
+        </div>
+      </header>
+
+      <div class="exercise-meta">
+        <span
+          ><strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong> répétitions</span
+        >
+        <span
+          ><strong>RIR {{ exercise.targetRir }}</strong> cible</span
+        >
+        <span
+          ><strong>{{ formatRest(exercise.restSeconds) }}</strong> repos</span
+        >
+      </div>
+
+      <div class="previous-performance">
+        <span>Dernière performance</span>
+        <strong>{{ previousPerformance() }}</strong>
+        <small>Les dernières valeurs sont préremplies automatiquement</small>
+      </div>
+
+      @if (exercise.cue) {
+        <p class="exercise-cue">{{ exercise.cue }}</p>
+      }
+
+      <div class="set-list">
+        <div class="set-labels">
+          <span>Série</span><span>Charge</span><span>Reps</span><span>RIR</span><span></span>
+        </div>
+        @for (set of sets(); track set.setNumber; let index = $index) {
+          <div class="set-row" [class.completed]="set.completed">
+            <span class="set-number">{{ set.setNumber }}</span>
+            <div class="stepper">
+              <button
+                type="button"
+                (click)="adjust(index, 'weightKg', -2.5)"
+                aria-label="Retirer 2,5 kg"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="2.5"
+                [value]="set.weightKg"
+                [disabled]="set.completed"
+                (change)="setValue(index, 'weightKg', $any($event.target).value)"
+                [attr.aria-label]="'Charge de la série ' + set.setNumber"
+              /><small>kg</small>
+              <button
+                type="button"
+                (click)="adjust(index, 'weightKg', 2.5)"
+                aria-label="Ajouter 2,5 kg"
+              >
+                +
+              </button>
+            </div>
+            <div class="stepper compact">
+              <button
+                type="button"
+                (click)="adjust(index, 'reps', -1)"
+                aria-label="Retirer une répétition"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                step="1"
+                [value]="set.reps"
+                [disabled]="set.completed"
+                (change)="setValue(index, 'reps', $any($event.target).value)"
+                [attr.aria-label]="'Répétitions de la série ' + set.setNumber"
+              />
+              <button
+                type="button"
+                (click)="adjust(index, 'reps', 1)"
+                aria-label="Ajouter une répétition"
+              >
+                +
+              </button>
+            </div>
+            <div class="stepper compact">
+              <button type="button" (click)="adjust(index, 'rir', -1)" aria-label="Réduire le RIR">
+                −
+              </button>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                max="5"
+                step="1"
+                [value]="set.rir"
+                [disabled]="set.completed"
+                (change)="setValue(index, 'rir', $any($event.target).value)"
+                [attr.aria-label]="'RIR de la série ' + set.setNumber"
+              />
+              <button type="button" (click)="adjust(index, 'rir', 1)" aria-label="Augmenter le RIR">
+                +
+              </button>
+            </div>
+            <button
+              class="check-button"
+              type="button"
+              (click)="toggleSet(index)"
+              [attr.aria-label]="
+                set.completed
+                  ? 'Annuler la série ' + set.setNumber
+                  : 'Valider la série ' + set.setNumber
+              "
+            >
+              @if (set.completed) {
+                <span>✓</span>
+              } @else {
+                <span></span>
+              }
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="exercise-progress">
+        <span
+          ><strong>{{ completedSets() }}</strong> / {{ sets().length }} séries</span
+        >
+        <div><i [style.width.%]="progress()"></i></div>
+      </div>
+    </article>
+
+    <button
+      class="next-exercise"
+      type="button"
+      [disabled]="activeExerciseIndex() === day().exercises.length - 1"
+      (click)="selectExercise(activeExerciseIndex() + 1)"
+    >
+      Exercice suivant <span>→</span>
+    </button>
+  }
+</section>
+
+@if (timerVisible()) {
+  <aside class="rest-timer" aria-live="polite">
+    <div class="timer-handle"></div>
+    <div class="timer-content">
+      <div>
+        <span>Repos en cours</span><strong>{{ timerLabel() }}</strong>
+      </div>
+      <div class="timer-actions">
+        <button type="button" (click)="adjustTimer(-15)">−15 s</button>
+        <button class="skip" type="button" (click)="skipTimer()">Passer</button>
+        <button type="button" (click)="adjustTimer(15)">+15 s</button>
+      </div>
+    </div>
+  </aside>
+}

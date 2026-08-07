@@ -1,0 +1,65 @@
+<main class="auth-page">
+  <a class="back-link" routerLink="/accueil" aria-label="Retour à l'accueil">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+  </a>
+
+  <section class="auth-content">
+    <div class="brand-mark">H</div>
+    <div>
+      <p class="eyebrow">Sauvegarde cloud</p>
+      <h1>{{ auth.isAuthenticated() ? 'Compte connecté.' : 'Tes performances, partout.' }}</h1>
+      <p class="intro">
+        @if (auth.isAuthenticated()) {
+          Ton historique local est synchronisé avec Supabase dès que le réseau est disponible.
+        } @else {
+          L’app reste utilisable sans réseau. Connecte-toi pour sauvegarder et retrouver tes séances
+          sur tous tes appareils.
+        }
+      </p>
+    </div>
+
+    @if (auth.isAuthenticated()) {
+      <article class="account-card">
+        <span>Compte actif</span>
+        <strong>{{ auth.user()?.email }}</strong>
+        <div><i [class.online]="sync.online()"></i>{{ sync.statusLabel() }}</div>
+      </article>
+      <button
+        class="primary-button"
+        type="button"
+        (click)="sync.syncNow()"
+        [disabled]="sync.syncing()"
+      >
+        {{ sync.syncing() ? 'Synchronisation…' : 'Synchroniser maintenant' }}
+      </button>
+      <button class="secondary-button" type="button" (click)="signOut()">Se déconnecter</button>
+    } @else {
+      <form (submit)="$event.preventDefault(); submit()">
+        <label for="email">Adresse e-mail</label>
+        <input
+          id="email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="toi@email.com"
+          [value]="email()"
+          (input)="email.set($any($event.target).value)"
+        />
+        <button class="primary-button" type="submit" [disabled]="auth.loading()">
+          {{ auth.loading() ? 'Connexion…' : 'Recevoir mon lien sécurisé' }}
+        </button>
+      </form>
+      @if (auth.message()) {
+        <p class="feedback success">{{ auth.message() }}</p>
+      }
+      @if (auth.error()) {
+        <p class="feedback error">{{ auth.error() }}</p>
+      }
+      <p class="privacy">
+        Aucun mot de passe. Un lien à usage unique est envoyé par Supabase Auth.
+      </p>
+    }
+
+    <a class="offline-link" routerLink="/accueil">Continuer en mode local</a>
+  </section>
+</main>

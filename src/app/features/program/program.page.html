@@ -1,0 +1,93 @@
+<section class="page program-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Cycle actif · 7 jours</p>
+      <h1>Programme</h1>
+    </div>
+    <button type="button" aria-label="Options du programme">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="5" cy="12" r="1" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+      </svg>
+    </button>
+  </header>
+
+  <article class="program-summary surface-card">
+    <div class="summary-number">01</div>
+    <div>
+      <span class="eyebrow">Programme principal</span>
+      <h2>{{ store.program().name }}</h2>
+      <p>{{ store.program().description }}</p>
+    </div>
+    <div class="summary-meta">
+      <span><strong>6</strong> entraînements</span>
+      <span><strong>1</strong> récupération</span>
+    </div>
+  </article>
+
+  <div class="list-heading">
+    <h2>Ton split</h2>
+    <span>{{ store.program().days.length }} jours</span>
+  </div>
+
+  <div class="day-list">
+    @for (day of store.program().days; track day.id) {
+      <article
+        class="day-card"
+        [class.expanded]="expandedDayId() === day.id"
+        [class.recovery]="day.kind === 'recovery'"
+      >
+        <button
+          class="day-trigger"
+          type="button"
+          (click)="toggleDay(day.id)"
+          [attr.aria-expanded]="expandedDayId() === day.id"
+        >
+          <span class="day-index">{{ day.dayNumber.toString().padStart(2, '0') }}</span>
+          <span class="day-title">
+            <small>{{
+              day.kind === 'recovery'
+                ? 'Récupération'
+                : day.exercises.length + ' exercices · ~' + day.durationMinutes + ' min'
+            }}</small>
+            <strong>{{ day.title }}</strong>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
+        </button>
+
+        @if (expandedDayId() === day.id) {
+          <div class="day-content">
+            <p class="focus">{{ day.focus }}</p>
+            @if (day.kind === 'training') {
+              <div class="exercise-list">
+                @for (exercise of day.exercises; track exercise.id; let index = $index) {
+                  <div class="exercise-row">
+                    <span>{{ (index + 1).toString().padStart(2, '0') }}</span>
+                    <div>
+                      <strong>{{ exercise.name }}</strong>
+                      <small>{{ exercise.category }}</small>
+                    </div>
+                    <div class="prescription">
+                      <strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong>
+                      <small
+                        >RIR {{ exercise.targetRir }} ·
+                        {{ formatRest(exercise.restSeconds) }}</small
+                      >
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <ul class="recovery-list">
+                @for (item of day.recoveryItems; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </article>
+    }
+  </div>
+</section>

@@ -1,30 +1,55 @@
 # Hypertrophy App
 
-PWA mobile-first de suivi d'entraînement orientée hypertrophie.
+PWA Angular mobile-first de suivi d’entraînement, orientée hypertrophie et performance.
 
-## Objectif du MVP
+## MVP actuel
 
-- consulter le programme de la semaine ;
-- démarrer une séance ;
-- saisir charge, répétitions et RIR ;
-- lancer automatiquement le minuteur de repos ;
-- conserver l'historique hors ligne sur l'iPhone ;
-- proposer une progression simple à la séance suivante.
+- accueil avec séance du jour et aperçu de progression ;
+- programme hypertrophie 7 jours préchargé ;
+- écran de séance avec charge, répétitions, RIR et validation des séries ;
+- minuteur de repos automatique ;
+- navigation basse flottante pensée pour l’iPhone ;
+- installation PWA et cache applicatif ;
+- stockage offline-first avec IndexedDB/Dexie ;
+- authentification Supabase par lien sécurisé ;
+- synchronisation bidirectionnelle IndexedDB ↔ Supabase ;
+- file locale avec reprise automatique après une coupure réseau.
 
-## Architecture cible
+## Stack
 
-- Angular standalone + TypeScript strict ;
-- PWA installable sur iOS ;
-- IndexedDB via Dexie pour le fonctionnement hors ligne ;
-- Supabase dans un second temps pour la sauvegarde et la synchronisation ;
-- interface mobile-first et mode sombre.
+- Angular 21 standalone et TypeScript strict ;
+- Angular Service Worker / PWA ;
+- Dexie 4 sur IndexedDB ;
+- Supabase Auth et PostgreSQL avec RLS ;
+- Vercel pour l’hébergement de production ;
+- SCSS sans bibliothèque UI externe.
 
-## Roadmap
+## Lancer le projet
 
-1. Socle Angular/PWA et navigation mobile.
-2. Modèle de données et programme préchargé.
-3. Écran de séance, saisie des séries et minuteur.
-4. Historique et surcharge progressive.
-5. Synchronisation Supabase.
+```bash
+pnpm install
+pnpm start
+```
 
-> Projet en cours d'initialisation.
+Puis ouvrir `http://localhost:4200`.
+
+## Vérifications
+
+```bash
+pnpm typecheck
+pnpm build
+```
+
+Le service worker est activé uniquement sur un build de production servi en HTTPS (ou sur localhost).
+
+## Base de données
+
+Les migrations versionnées sont dans `supabase/migrations`. Le schéma contient le catalogue du programme, les journées, les exercices, les séances, les séries et les mensurations. Toutes les tables publiques ont RLS activé ; les données d’entraînement sont limitées à leur propriétaire.
+
+L’URL Supabase et la clé **publishable** utilisées par le navigateur sont dans `src/environments/environment.ts`. Cette clé est publique par conception ; aucune clé `secret` ou `service_role` ne doit être ajoutée au frontend.
+
+## Suite prévue
+
+1. Écran Historique et graphiques de progression.
+2. Records personnels et règles de surcharge progressive.
+3. Personnalisation du programme et des pas de charge.

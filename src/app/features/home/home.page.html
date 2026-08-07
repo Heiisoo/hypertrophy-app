@@ -1,0 +1,119 @@
+<section class="page home-page">
+  <header class="topbar">
+    <a class="brand" routerLink="/accueil" aria-label="Hypertrophy, accueil">
+      <span class="brand-mark">H</span>
+      <span>HYPERTROPHY</span>
+    </a>
+    <a
+      class="local-badge"
+      routerLink="/connexion"
+      [class.ready]="store.ready()"
+      [class.cloud]="auth.isAuthenticated()"
+    >
+      <span></span
+      >{{
+        auth.isAuthenticated()
+          ? sync.statusLabel()
+          : store.ready()
+            ? 'Local prêt'
+            : 'Initialisation'
+      }}
+    </a>
+  </header>
+
+  <div class="welcome">
+    <p class="muted date">{{ dateLabel }}</p>
+    <h1>Construis.<br /><span>Progresse.</span></h1>
+  </div>
+
+  <article class="today-card surface-card">
+    <div class="today-glow"></div>
+    <div class="card-topline">
+      <span class="eyebrow">Séance du jour · J{{ store.today().dayNumber }}</span>
+      <span class="status-dot">Prévue</span>
+    </div>
+    <h2>{{ store.today().title }}</h2>
+    <p>{{ store.today().focus }}</p>
+
+    @if (store.today().kind === 'training') {
+      <div class="metrics" aria-label="Détails de la séance">
+        <div>
+          <strong>{{ store.today().exercises.length }}</strong
+          ><span>exercices</span>
+        </div>
+        <div>
+          <strong>{{ totalSets() }}</strong
+          ><span>séries</span>
+        </div>
+        <div>
+          <strong>~{{ store.today().durationMinutes }}</strong
+          ><span>minutes</span>
+        </div>
+      </div>
+      <a class="primary-button" routerLink="/seance">
+        Commencer la séance
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+      </a>
+    } @else {
+      <div class="recovery-callout">
+        <span>Récupération</span>
+        <strong>{{ store.today().durationMinutes }} min de mouvement léger</strong>
+      </div>
+    }
+  </article>
+
+  <section class="section-block" aria-labelledby="week-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Cette semaine</p>
+        <h2 id="week-title">Ton rythme</h2>
+      </div>
+      <span>3 / 6</span>
+    </div>
+    <div class="week-card surface-card">
+      <div class="week-days" aria-label="Progression hebdomadaire">
+        @for (day of store.program().days; track day.id; let index = $index) {
+          <div
+            [class.done]="index < 4"
+            [class.current]="day.id === store.today().id"
+            [class.rest]="day.kind === 'recovery'"
+          >
+            <span>{{ ['L', 'M', 'M', 'J', 'V', 'S', 'D'][index] }}</span>
+            <i>{{ day.kind === 'recovery' ? '—' : index < 4 ? '✓' : '' }}</i>
+          </div>
+        }
+      </div>
+      <div class="progress-track"><span></span></div>
+      <p><strong>50 %</strong> de la semaine complétée</p>
+    </div>
+  </section>
+
+  <section class="quick-grid" aria-label="Aperçu de progression">
+    <article class="surface-card stat-card">
+      <span class="stat-icon">↗</span>
+      <p>Historique local</p>
+      <strong>{{ history.completedSessionCount() }}</strong
+      ><small>Séances terminées</small>
+    </article>
+    <article class="surface-card stat-card">
+      <span class="stat-icon champagne">◆</span>
+      <p>Meilleur set</p>
+      <strong>
+        @if (history.bestSet(); as best) {
+          {{ best.weightKg }} × {{ best.reps }}
+        } @else {
+          À établir
+        }
+      </strong>
+      <small>{{ history.bestSet() ? 'Données enregistrées' : 'Valide ta première série' }}</small>
+    </article>
+  </section>
+
+  <a class="next-card" routerLink="/programme">
+    <div>
+      <span class="eyebrow">Prochaine étape</span
+      ><strong>J{{ nextDay().dayNumber }} · {{ nextDay().title }}</strong>
+    </div>
+    <span aria-hidden="true">→</span>
+  </a>
+</section>
