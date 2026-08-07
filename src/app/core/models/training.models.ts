@@ -34,6 +34,12 @@ export interface TrainingProgram {
   readonly days: readonly ProgramDay[];
 }
 
+export interface LocalUserProgram {
+  readonly ownerId: string;
+  readonly program: TrainingProgram;
+  readonly updatedAt: string;
+}
+
 export interface WorkoutSession {
   readonly id: string;
   readonly programDayId: string;

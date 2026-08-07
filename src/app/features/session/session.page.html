@@ -21,6 +21,26 @@
   </header>
 
   @if (!workout.activeSession()) {
+    <section class="day-picker" aria-labelledby="day-picker-title">
+      <div>
+        <span class="eyebrow">Séance libre</span>
+        <h1 id="day-picker-title">Choisis ton entraînement</h1>
+      </div>
+      <div class="day-picker-list" role="list">
+        @for (candidate of trainingDays(); track candidate.id) {
+          <button
+            type="button"
+            [class.active]="candidate.id === day().id"
+            (click)="selectDay(candidate.id)"
+          >
+            <span>J{{ candidate.dayNumber }}</span>
+            <strong>{{ candidate.shortTitle }}</strong>
+            <small>{{ candidate.exercises.length }} exercices</small>
+          </button>
+        }
+      </div>
+    </section>
+
     <article class="session-start-card surface-card">
       <span class="eyebrow">Jour {{ day().dayNumber }} · Prêt quand tu l'es</span>
       <h1>{{ day().title }}</h1>

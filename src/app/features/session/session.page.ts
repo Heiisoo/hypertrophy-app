@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { hypertrophyDb } from '../../core/database/hypertrophy.database';
 import { ExercisePrescription } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
@@ -35,6 +35,12 @@ export class SessionPage implements OnDestroy {
   protected readonly workout = inject(WorkoutSessionService);
   private readonly history = inject(HistoryService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  protected readonly trainingDays = computed(() =>
+    this.store.program().days.filter((day) => day.kind === 'training'),
+  );
+  protected readonly selectedDayId = signal('');
 
   protected readonly day = computed(() => {
     const today = this.store.today();
@@ -43,9 +49,9 @@ export class SessionPage implements OnDestroy {
       ? this.store.program().days.find((day) => day.id === activeDayId)
       : undefined;
     if (activeDay) return activeDay;
-    return today.kind === 'training'
-      ? today
-      : (this.store.program().days.find((day) => day.kind === 'training') ?? today);
+    const selectedDay = this.trainingDays().find((day) => day.id === this.selectedDayId());
+    if (selectedDay) return selectedDay;
+    return today.kind === 'training' ? today : (this.trainingDays()[0] ?? today);
   });
   protected readonly activeExerciseIndex = signal(0);
   protected readonly activeExercise = computed(
@@ -74,6 +80,12 @@ export class SessionPage implements OnDestroy {
   private timerId?: ReturnType<typeof setInterval>;
 
   constructor() {
+    const requestedDayId = this.route.snapshot.queryParamMap.get('day');
+    const requestedDay = this.trainingDays().find((day) => day.id === requestedDayId);
+    const today = this.store.today();
+    this.selectedDayId.set(
+      requestedDay?.id ?? (today.kind === 'training' ? today.id : this.trainingDays()[0]?.id ?? ''),
+    );
     for (const exercise of this.day().exercises) {
       this.setCache.set(exercise.id, this.createSets(exercise));
     }
@@ -91,6 +103,28 @@ export class SessionPage implements OnDestroy {
     this.activeExerciseIndex.set(index);
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
     this.updatePreviousLabel();
+  }
+
+  protected async selectDay(dayId: string): Promise<void> {
+    if (this.workout.activeSession() || dayId === this.day().id) return;
+    const selectedDay = this.trainingDays().find((day) => day.id === dayId);
+    if (!selectedDay) return;
+
+    this.selectedDayId.set(dayId);
+    this.activeExerciseIndex.set(0);
+    this.completedTotal.set(0);
+    this.setCache.clear();
+    this.previousLabels.clear();
+    for (const exercise of selectedDay.exercises) {
+      this.setCache.set(exercise.id, this.createSets(exercise));
+    }
+    this.sets.set(this.setCache.get(selectedDay.exercises[0]?.id ?? '') ?? []);
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { day: dayId },
+      replaceUrl: true,
+    });
+    await this.hydratePreviousSets();
   }
 
   protected adjust(setIndex: number, field: 'weightKg' | 'reps' | 'rir', amount: number): void {
