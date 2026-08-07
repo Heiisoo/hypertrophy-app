@@ -3,7 +3,7 @@ import { TrainingProgram } from '../core/models/training.models';
 export const SEED_PROGRAM: TrainingProgram = {
   id: 'cbum-inspired-hypertrophy-v1',
   name: 'Hypertrophie — Cycle 01',
-  description: 'Split 7 jours orienté V-taper, épaules, haut des pectoraux et performance.',
+  description: 'Cycle de 8 jours orienté V-taper, épaules, haut des pectoraux et performance.',
   active: 1,
   createdAt: '2026-08-07T00:00:00.000Z',
   days: [
@@ -458,6 +458,22 @@ export const SEED_PROGRAM: TrainingProgram = {
           restSeconds: 75,
           category: 'Finisher',
         },
+      ],
+    },
+    {
+      id: 'day-8-recovery',
+      dayNumber: 8,
+      title: 'Récupération active',
+      shortTitle: 'Repos',
+      focus: 'Faire redescendre la fatigue avant le nouveau cycle',
+      kind: 'recovery',
+      durationMinutes: 30,
+      exercises: [],
+      recoveryItems: [
+        'Marche 25–40 min',
+        'Cardio zone 2 léger',
+        'Mobilité hanches & épaules',
+        'Hydratation et sommeil',
       ],
     },
   ],

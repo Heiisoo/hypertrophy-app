@@ -1,7 +1,7 @@
 <section class="page program-page">
   <header class="page-header">
     <div>
-      <p class="eyebrow">Cycle actif · 7 jours</p>
+      <p class="eyebrow">Cycle actif · {{ store.program().days.length }} jours</p>
       <h1>Programme</h1>
     </div>
     <button
@@ -41,10 +41,13 @@
       }
     </div>
     <div class="summary-meta">
-      <span><strong>6</strong> entraînements</span>
-      <span><strong>1</strong> récupération</span>
+      <span><strong>{{ trainingDayCount() }}</strong> entraînements</span>
+      <span><strong>{{ recoveryDayCount() }}</strong> récupérations</span>
       <span>{{ store.saving() ? 'Enregistrement…' : store.saveLabel() }}</span>
     </div>
+    <button class="cycle-reset-button" type="button" (click)="resetCycle()">
+      Recommencer le cycle aujourd’hui
+    </button>
     @if (editing()) {
       <button class="restore-button" type="button" (click)="restoreDefault()">
         Restaurer le programme initial
@@ -88,6 +91,15 @@
           <div class="day-content">
             @if (editing()) {
               <div class="day-editor">
+                <div class="cycle-day-actions">
+                  <button type="button" [disabled]="$first" (click)="store.moveDay(day.id, -1)">
+                    ↑ Monter
+                  </button>
+                  <button type="button" [disabled]="$last" (click)="store.moveDay(day.id, 1)">
+                    ↓ Descendre
+                  </button>
+                  <button class="danger" type="button" (click)="removeDay(day)">Supprimer</button>
+                </div>
                 <label class="edit-field">
                   <span>Nom de la journée</span>
                   <input
@@ -158,7 +170,12 @@
 
               <div class="day-actions">
                 @if (editing()) {
-                  <button type="button" (click)="addExercise(day.id)">+ Ajouter un exercice</button>
+                  <button type="button" (click)="openCatalog(day.id)">
+                    + Ajouter depuis le catalogue
+                  </button>
+                  <button class="secondary" type="button" (click)="addExercise(day.id)">
+                    Créer un exercice manuellement
+                  </button>
                 } @else {
                   <a [routerLink]="['/seance']" [queryParams]="{ day: day.id }">
                     Choisir cette séance
@@ -177,6 +194,17 @@
       </article>
     }
   </div>
+
+  @if (editing()) {
+    <section class="cycle-builder surface-card">
+      <div>
+        <span class="eyebrow">Rotation personnalisée</span>
+        <strong>Ajouter un jour au cycle</strong>
+      </div>
+      <button type="button" (click)="addDay('training')">+ Entraînement</button>
+      <button type="button" (click)="addDay('recovery')">+ Repos</button>
+    </section>
+  }
 </section>
 
 @if (editor(); as currentEditor) {
@@ -260,6 +288,26 @@
             (input)="updateDraft('cue', $any($event.target).value)"
           ></textarea>
         </label>
+        <label class="edit-field">
+          <span>URL de l’illustration (optionnel)</span>
+          <input
+            type="url"
+            inputmode="url"
+            placeholder="https://…/illustration.jpg"
+            [value]="currentDraft.imageUrl"
+            (input)="updateDraft('imageUrl', $any($event.target).value)"
+          />
+        </label>
+        <label class="edit-field">
+          <span>URL de la vidéo MP4 (optionnel)</span>
+          <input
+            type="url"
+            inputmode="url"
+            placeholder="https://…/demonstration.mp4"
+            [value]="currentDraft.videoUrl"
+            (input)="updateDraft('videoUrl', $any($event.target).value)"
+          />
+        </label>
 
         <div class="editor-footer">
           <button type="button" (click)="closeEditor()">Annuler</button>
@@ -268,4 +316,77 @@
       </section>
     </div>
   }
+}
+
+@if (catalogDayId()) {
+  <div class="editor-backdrop" role="presentation" (click)="closeCatalog()">
+    <section
+      class="catalog-picker surface-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="editor-heading">
+        <div>
+          <span class="eyebrow">Bibliothèque</span>
+          <h2 id="catalog-title">Choisir un exercice</h2>
+        </div>
+        <button type="button" aria-label="Fermer" (click)="closeCatalog()">×</button>
+      </div>
+
+      <label class="catalog-search">
+        <span>Rechercher par nom, muscle ou matériel</span>
+        <input
+          type="search"
+          inputmode="search"
+          placeholder="Ex. développé, dos, haltères…"
+          [value]="catalogSearch()"
+          (input)="catalogSearch.set($any($event.target).value)"
+        />
+      </label>
+
+      <div class="category-filters" aria-label="Filtrer par catégorie">
+        <button
+          type="button"
+          [class.active]="catalogCategory() === ''"
+          (click)="catalogCategory.set('')"
+        >Tous</button>
+        @for (category of catalog.categories(); track category) {
+          <button
+            type="button"
+            [class.active]="catalogCategory() === category"
+            (click)="catalogCategory.set(category)"
+          >{{ category }}</button>
+        }
+      </div>
+
+      @if (catalog.loading()) {
+        <p class="catalog-state">Chargement du catalogue…</p>
+      } @else if (catalog.error()) {
+        <p class="catalog-state">{{ catalog.error() }}</p>
+      } @else {
+        <div class="catalog-list">
+          @for (exercise of filteredCatalog(); track exercise.id) {
+            <button
+              type="button"
+              [disabled]="catalogExerciseAdded(exercise.id)"
+              (click)="selectCatalogExercise(exercise)"
+            >
+              <span class="catalog-visual">{{ exercise.name.slice(0, 1) }}</span>
+              <span>
+                <strong>{{ exercise.name }}</strong>
+                <small>
+                  {{ exercise.category }}{{ exercise.equipment ? ' · ' + exercise.equipment : '' }}
+                </small>
+              </span>
+              <i>{{ catalogExerciseAdded(exercise.id) ? 'Ajouté' : '+' }}</i>
+            </button>
+          } @empty {
+            <p class="catalog-state">Aucun exercice ne correspond à cette recherche.</p>
+          }
+        </div>
+      }
+    </section>
+  </div>
 }

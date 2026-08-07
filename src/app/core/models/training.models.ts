@@ -11,6 +11,20 @@ export interface ExercisePrescription {
   readonly restSeconds: number;
   readonly category: string;
   readonly cue?: string;
+  readonly imageUrl?: string;
+  readonly videoUrl?: string;
+}
+
+export interface ExerciseCatalogItem {
+  readonly id: string;
+  readonly name: string;
+  readonly category: string;
+  readonly equipment?: string;
+  readonly primaryMuscles: readonly string[];
+  readonly aliases: readonly string[];
+  readonly instructions?: string;
+  readonly imageUrl?: string;
+  readonly videoUrl?: string;
 }
 
 export interface ProgramDay {
@@ -31,6 +45,7 @@ export interface TrainingProgram {
   readonly description: string;
   readonly active: 0 | 1;
   readonly createdAt: string;
+  readonly rotationStartedAt?: string;
   readonly days: readonly ProgramDay[];
 }
 
@@ -42,6 +57,7 @@ export interface LocalUserProgram {
 
 export interface WorkoutSession {
   readonly id: string;
+  readonly ownerId: string;
   readonly programDayId: string;
   readonly startedAt: string;
   readonly finishedAt?: string;
@@ -53,6 +69,7 @@ export interface WorkoutSession {
 
 export interface WorkoutSet {
   readonly id: string;
+  readonly ownerId: string;
   readonly sessionId: string;
   readonly exerciseId: string;
   readonly setNumber: number;
@@ -64,6 +81,7 @@ export interface WorkoutSet {
 
 export interface SyncQueueItem {
   id?: number;
+  readonly ownerId: string;
   readonly entityType: 'session' | 'set';
   readonly entityId: string;
   readonly operation: 'upsert' | 'delete';

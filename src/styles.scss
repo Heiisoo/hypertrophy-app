@@ -33,6 +33,7 @@
 html {
   min-height: 100%;
   background: #080809;
+  touch-action: manipulation;
 }
 body {
   min-width: 320px;
@@ -49,6 +50,7 @@ input {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 button {
   color: inherit;

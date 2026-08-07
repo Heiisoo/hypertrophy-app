@@ -15,9 +15,10 @@ export class AuthStore implements OnDestroy {
     this.session.set(session);
     this.loading.set(false);
   }).data.subscription;
+  private readonly initialization = this.initialize();
 
-  constructor() {
-    void this.initialize();
+  async whenReady(): Promise<void> {
+    await this.initialization;
   }
 
   ngOnDestroy(): void {

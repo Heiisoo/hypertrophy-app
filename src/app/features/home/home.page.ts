@@ -32,8 +32,27 @@ export class HomePage {
 
   protected readonly nextDay = computed(() => {
     const days = this.store.program().days;
-    const nextIndex = this.store.today().dayNumber % days.length;
-    return days[nextIndex];
+    return days[(this.store.currentDayIndex() + 1) % days.length] ?? this.store.today();
+  });
+
+  protected readonly completedDayIds = computed(() => {
+    const cycleStart = new Date(`${this.store.currentCycleStartedAt()}T00:00:00`).getTime();
+    return new Set(
+      this.history
+        .completedSessions()
+        .filter((session) => new Date(session.finishedAt ?? session.startedAt).getTime() >= cycleStart)
+        .map((session) => session.programDayId),
+    );
+  });
+  protected readonly cycleTrainingDays = computed(() =>
+    this.store.program().days.filter((day) => day.kind === 'training'),
+  );
+  protected readonly completedCycleSessions = computed(
+    () => this.cycleTrainingDays().filter((day) => this.completedDayIds().has(day.id)).length,
+  );
+  protected readonly cycleProgress = computed(() => {
+    const total = this.cycleTrainingDays().length;
+    return total === 0 ? 0 : Math.round((this.completedCycleSessions() / total) * 100);
   });
 
   protected async openSession(): Promise<void> {

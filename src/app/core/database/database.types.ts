@@ -46,22 +46,40 @@ export type Database = {
       };
       exercises: {
         Row: {
+          aliases: string[];
           category: string;
           created_at: string;
+          equipment: string | null;
           id: string;
+          image_url: string | null;
+          instructions: string | null;
           name: string;
+          primary_muscles: string[];
+          video_url: string | null;
         };
         Insert: {
+          aliases?: string[];
           category: string;
           created_at?: string;
+          equipment?: string | null;
           id: string;
+          image_url?: string | null;
+          instructions?: string | null;
           name: string;
+          primary_muscles?: string[];
+          video_url?: string | null;
         };
         Update: {
+          aliases?: string[];
           category?: string;
           created_at?: string;
+          equipment?: string | null;
           id?: string;
+          image_url?: string | null;
+          instructions?: string | null;
           name?: string;
+          primary_muscles?: string[];
+          video_url?: string | null;
         };
         Relationships: [];
       };

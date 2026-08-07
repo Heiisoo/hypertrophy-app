@@ -107,6 +107,17 @@
   font-size: 0.66rem;
   font-weight: 700;
 }
+.cycle-reset-button {
+  position: relative;
+  z-index: 1;
+  min-height: 42px;
+  border: 1px solid rgb(184 165 138 / 20%);
+  border-radius: 12px;
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 6%);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
 
 .edit-field {
   display: grid;
@@ -241,6 +252,29 @@
   border-radius: 14px;
   background: rgb(184 165 138 / 4%);
 }
+.cycle-day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.cycle-day-actions button {
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 9px;
+  color: var(--color-muted);
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.59rem;
+  font-weight: 700;
+}
+.cycle-day-actions button:disabled {
+  opacity: 0.3;
+}
+.cycle-day-actions .danger {
+  margin-left: auto;
+  color: #d9a59a;
+  border-color: rgb(122 52 40 / 30%);
+}
 .compact-field {
   max-width: 160px;
 }
@@ -314,7 +348,13 @@
 }
 .day-actions {
   display: grid;
+  gap: 7px;
   margin-top: 14px;
+}
+.day-actions .secondary {
+  border-color: rgb(255 255 255 / 9%);
+  color: var(--color-muted);
+  background: rgb(255 255 255 / 3%);
 }
 .day-actions button,
 .day-actions a {
@@ -403,6 +443,146 @@
   border-color: rgb(122 52 40 / 50%);
   color: #fff3ef;
   background: linear-gradient(135deg, #854034, #5a2e24);
+}
+
+.cycle-builder {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 17px;
+}
+.cycle-builder > div {
+  display: grid;
+  gap: 6px;
+}
+.cycle-builder strong {
+  font-size: 0.78rem;
+}
+.cycle-builder button {
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgb(122 52 40 / 36%);
+  border-radius: 11px;
+  color: #eddad4;
+  background: rgb(90 46 36 / 20%);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.catalog-picker {
+  width: min(100%, 560px);
+  max-height: min(90dvh, 820px);
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 20px;
+}
+.catalog-search {
+  display: grid;
+  gap: 7px;
+}
+.catalog-search > span {
+  color: var(--color-muted);
+  font-size: 0.61rem;
+  font-weight: 700;
+}
+.catalog-search input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 13px;
+  outline: none;
+  color: var(--color-text);
+  background: rgb(0 0 0 / 20%);
+  font-size: 0.75rem;
+}
+.category-filters {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.category-filters::-webkit-scrollbar {
+  display: none;
+}
+.category-filters button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 999px;
+  color: var(--color-muted);
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.6rem;
+}
+.category-filters button.active {
+  border-color: rgb(184 165 138 / 38%);
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 9%);
+}
+.catalog-list {
+  display: grid;
+  gap: 7px;
+  overflow-y: auto;
+}
+.catalog-list > button {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 13px;
+  color: var(--color-silver);
+  background: rgb(255 255 255 / 2%);
+  text-align: left;
+}
+.catalog-list > button:disabled {
+  opacity: 0.45;
+}
+.catalog-visual {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--color-champagne);
+  background: linear-gradient(145deg, rgb(90 46 36 / 45%), rgb(31 29 30));
+  font-weight: 900;
+}
+.catalog-list > button > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.catalog-list strong {
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.catalog-list small,
+.catalog-list i,
+.catalog-state {
+  color: var(--color-muted);
+  font-size: 0.6rem;
+  font-style: normal;
+}
+.catalog-state {
+  padding: 22px;
+  text-align: center;
+}
+
+@media (max-width: 430px) {
+  .cycle-builder {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cycle-builder > div {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 380px) {

@@ -34,9 +34,10 @@ export class SyncService {
     window.addEventListener('offline', () => this.online.set(false));
 
     effect(() => {
-      const authenticated = this.auth.isAuthenticated();
+      const userId = this.auth.user()?.id;
       const isOnline = this.online();
-      if (authenticated && isOnline) void this.syncNow();
+      void this.refreshPendingCount();
+      if (userId && isOnline) void this.syncNow();
     });
     void this.refreshPendingCount();
   }
@@ -67,8 +68,8 @@ export class SyncService {
     this.error.set('');
     try {
       const items = await hypertrophyDb.syncQueue
-        .where('status')
-        .anyOf('pending', 'failed')
+        .where('[ownerId+status]')
+        .anyOf([user.id, 'pending'], [user.id, 'failed'])
         .sortBy('createdAt');
 
       for (const item of items) {
@@ -98,14 +99,14 @@ export class SyncService {
   private async pushItem(item: SyncQueueItem, userId: string): Promise<void> {
     if (item.entityType === 'session') {
       const session = await hypertrophyDb.workoutSessions.get(item.entityId);
-      if (session) await this.upsertSession(session, userId);
+      if (session?.ownerId === userId) await this.upsertSession(session, userId);
       return;
     }
 
     const set = await hypertrophyDb.workoutSets.get(item.entityId);
-    if (!set) return;
+    if (!set || set.ownerId !== userId) return;
     const session = await hypertrophyDb.workoutSessions.get(set.sessionId);
-    if (!session) throw new Error('missing_session');
+    if (!session || session.ownerId !== userId) throw new Error('missing_session');
 
     await this.upsertSession(session, userId);
     const { error } = await supabase.from('workout_sets').upsert({
@@ -163,6 +164,7 @@ export class SyncService {
             const local = localSessions.get(session.id);
             return {
               id: session.id,
+              ownerId: userId,
               programDayId: session.program_day_id,
               startedAt: session.started_at,
               finishedAt: session.finished_at ?? undefined,
@@ -179,6 +181,7 @@ export class SyncService {
         await hypertrophyDb.workoutSets.bulkPut(
           setsResult.data.map((set) => ({
             id: set.id,
+            ownerId: userId,
             sessionId: set.session_id,
             exerciseId: set.exercise_id,
             setNumber: set.set_number,
@@ -193,7 +196,11 @@ export class SyncService {
   }
 
   private async refreshPendingCount(): Promise<void> {
-    const count = await hypertrophyDb.syncQueue.where('status').anyOf('pending', 'failed').count();
+    const ownerId = this.auth.user()?.id ?? 'local';
+    const count = await hypertrophyDb.syncQueue
+      .where('[ownerId+status]')
+      .anyOf([ownerId, 'pending'], [ownerId, 'failed'])
+      .count();
     this.pendingCount.set(count);
   }
 }
