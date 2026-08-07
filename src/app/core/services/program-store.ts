@@ -164,7 +164,7 @@ export class ProgramStore implements OnDestroy {
   }
 
   async removeDay(dayId: string): Promise<void> {
-    if (this.programState().days.length <= 2) return;
+    if (this.programState().days.length <= 1) return;
     await this.persist({
       ...this.programState(),
       days: this.programState().days.filter((day) => day.id !== dayId),
