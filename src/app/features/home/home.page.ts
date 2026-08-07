@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ProgramStore } from '../../core/services/program-store';
 import { AuthStore } from '../../core/services/auth-store';
 import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
+import { WorkoutSessionService } from '../../core/services/workout-session.service';
 
 @Component({
   selector: 'app-home-page',
@@ -17,6 +18,8 @@ export class HomePage {
   protected readonly auth = inject(AuthStore);
   protected readonly sync = inject(SyncService);
   protected readonly history = inject(HistoryService);
+  protected readonly workout = inject(WorkoutSessionService);
+  private readonly router = inject(Router);
   protected readonly dateLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
     day: 'numeric',
@@ -32,4 +35,9 @@ export class HomePage {
     const nextIndex = this.store.today().dayNumber % days.length;
     return days[nextIndex];
   });
+
+  protected async startSession(): Promise<void> {
+    await this.workout.start(this.store.today().id);
+    await this.router.navigate(['/seance']);
+  }
 }

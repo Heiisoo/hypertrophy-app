@@ -130,6 +130,7 @@ export class SyncService {
       started_at: session.startedAt,
       finished_at: session.finishedAt ?? null,
       status: session.status,
+      duration_seconds: session.durationSeconds ?? null,
     });
     if (error) throw error;
   }
@@ -142,22 +143,38 @@ export class SyncService {
     if (sessionsResult.error) throw sessionsResult.error;
     if (setsResult.error) throw setsResult.error;
 
+    const localSessions = new Map(
+      (
+        await hypertrophyDb.workoutSessions.bulkGet(
+          sessionsResult.data.map((session) => session.id),
+        )
+      )
+        .filter((session): session is WorkoutSession => Boolean(session))
+        .map((session) => [session.id, session]),
+    );
+
     await hypertrophyDb.transaction(
       'rw',
       hypertrophyDb.workoutSessions,
       hypertrophyDb.workoutSets,
       async () => {
         await hypertrophyDb.workoutSessions.bulkPut(
-          sessionsResult.data.map((session) => ({
-            id: session.id,
-            programDayId: session.program_day_id,
-            startedAt: session.started_at,
-            finishedAt: session.finished_at ?? undefined,
-            status:
-              session.status === 'completed' || session.status === 'abandoned'
-                ? session.status
-                : 'active',
-          })),
+          sessionsResult.data.map((session) => {
+            const local = localSessions.get(session.id);
+            return {
+              id: session.id,
+              programDayId: session.program_day_id,
+              startedAt: session.started_at,
+              finishedAt: session.finished_at ?? undefined,
+              durationSeconds: session.duration_seconds ?? local?.durationSeconds,
+              pausedAt: local?.pausedAt,
+              accumulatedPausedSeconds: local?.accumulatedPausedSeconds,
+              status:
+                session.status === 'completed' || session.status === 'abandoned'
+                  ? session.status
+                  : 'active',
+            };
+          }),
         );
         await hypertrophyDb.workoutSets.bulkPut(
           setsResult.data.map((set) => ({

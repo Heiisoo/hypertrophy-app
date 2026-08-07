@@ -12,6 +12,7 @@ import { ExercisePrescription } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
 import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
+import { WorkoutSessionService } from '../../core/services/workout-session.service';
 
 interface EditableSet {
   readonly setNumber: number;
@@ -31,11 +32,17 @@ interface EditableSet {
 export class SessionPage implements OnDestroy {
   protected readonly store = inject(ProgramStore);
   protected readonly sync = inject(SyncService);
+  protected readonly workout = inject(WorkoutSessionService);
   private readonly history = inject(HistoryService);
   private readonly router = inject(Router);
 
   protected readonly day = computed(() => {
     const today = this.store.today();
+    const activeDayId = this.workout.activeSession()?.programDayId;
+    const activeDay = activeDayId
+      ? this.store.program().days.find((day) => day.id === activeDayId)
+      : undefined;
+    if (activeDay) return activeDay;
     return today.kind === 'training'
       ? today
       : (this.store.program().days.find((day) => day.kind === 'training') ?? today);
@@ -59,11 +66,10 @@ export class SessionPage implements OnDestroy {
   protected readonly timerVisible = computed(() => this.restSeconds() > 0);
   protected readonly timerLabel = computed(() => this.formatTimer(this.restSeconds()));
   protected readonly previousPerformance = signal('Aucune donnée locale');
+  protected readonly finishConfirmationVisible = signal(false);
 
   private readonly setCache = new Map<string, readonly EditableSet[]>();
   private readonly previousLabels = new Map<string, string>();
-  private readonly sessionId = `session-${crypto.randomUUID()}`;
-  private readonly sessionStartedAt = new Date().toISOString();
   private timerId?: ReturnType<typeof setInterval>;
 
   constructor() {
@@ -71,7 +77,7 @@ export class SessionPage implements OnDestroy {
       this.setCache.set(exercise.id, this.createSets(exercise));
     }
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
-    void this.hydratePreviousSets();
+    void this.initializeSession();
   }
 
   ngOnDestroy(): void {
@@ -130,33 +136,66 @@ export class SessionPage implements OnDestroy {
 
   protected async finishSession(): Promise<void> {
     const remaining = this.totalSets() - this.completedTotal();
-    if (
-      remaining > 0 &&
-      !window.confirm(`Il reste ${remaining} séries. Terminer quand même la séance ?`)
-    ) {
+    if (remaining > 0) {
+      this.finishConfirmationVisible.set(true);
       return;
     }
 
-    const now = new Date().toISOString();
-    await hypertrophyDb.transaction(
-      'rw',
-      hypertrophyDb.workoutSessions,
-      hypertrophyDb.syncQueue,
-      async () => {
-        await hypertrophyDb.workoutSessions.put({
-          id: this.sessionId,
-          programDayId: this.day().id,
-          startedAt: this.sessionStartedAt,
-          finishedAt: now,
-          status: 'completed',
-        });
-        await this.replaceQueueItem('session', this.sessionId, now);
-      },
-    );
+    await this.confirmFinishSession();
+  }
+
+  protected cancelFinishSession(): void {
+    this.finishConfirmationVisible.set(false);
+  }
+
+  protected async confirmFinishSession(): Promise<void> {
+    this.finishConfirmationVisible.set(false);
+    await this.workout.finish();
     this.skipTimer();
-    await this.sync.notifyQueueChanged();
-    await this.history.refresh();
     await this.router.navigate(['/accueil']);
+  }
+
+  private async initializeSession(): Promise<void> {
+    const session = await this.workout.start(this.day().id);
+    for (const exercise of this.day().exercises) {
+      if (!this.setCache.has(exercise.id))
+        this.setCache.set(exercise.id, this.createSets(exercise));
+    }
+    await this.hydratePreviousSets(session.id);
+    await this.hydrateActiveSets(session.id);
+  }
+
+  private async hydrateActiveSets(sessionId: string): Promise<void> {
+    const savedSets = await hypertrophyDb.workoutSets
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray();
+    for (const exercise of this.day().exercises) {
+      const exerciseSets = savedSets
+        .filter((set) => set.exerciseId === exercise.id)
+        .sort((a, b) => a.setNumber - b.setNumber);
+      if (exerciseSets.length === 0) continue;
+      const defaults = this.createSets(exercise);
+      this.setCache.set(
+        exercise.id,
+        defaults.map((fallback, index) => {
+          const saved = exerciseSets[index];
+          return saved
+            ? {
+                setNumber: saved.setNumber,
+                weightKg: saved.weightKg,
+                reps: saved.reps,
+                rir: saved.rir,
+                completed: Boolean(saved.completedAt),
+              }
+            : fallback;
+        }),
+      );
+    }
+    this.completedTotal.set(
+      [...this.setCache.values()].flat().filter((set) => set.completed).length,
+    );
+    this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
   }
 
   protected adjustTimer(amount: number): void {
@@ -196,10 +235,10 @@ export class SessionPage implements OnDestroy {
     }));
   }
 
-  private async hydratePreviousSets(): Promise<void> {
+  private async hydratePreviousSets(activeSessionId: string): Promise<void> {
     await Promise.all(
       this.day().exercises.map(async (exercise) => {
-        const previous = await this.history.previousSets(exercise.id);
+        const previous = await this.history.previousSets(exercise.id, activeSessionId);
         if (previous.length === 0) return;
         const fallback = previous[previous.length - 1];
         this.setCache.set(
@@ -261,6 +300,7 @@ export class SessionPage implements OnDestroy {
   }
 
   private async persistSet(exercise: ExercisePrescription, set: EditableSet): Promise<void> {
+    const session = await this.workout.start(this.day().id);
     const now = new Date().toISOString();
     await hypertrophyDb.transaction(
       'rw',
@@ -268,16 +308,11 @@ export class SessionPage implements OnDestroy {
       hypertrophyDb.workoutSets,
       hypertrophyDb.syncQueue,
       async () => {
-        await hypertrophyDb.workoutSessions.put({
-          id: this.sessionId,
-          programDayId: this.day().id,
-          startedAt: this.sessionStartedAt,
-          status: 'active',
-        });
-        const setId = `${this.sessionId}-${exercise.id}-${set.setNumber}`;
+        await hypertrophyDb.workoutSessions.put(session);
+        const setId = `${session.id}-${exercise.id}-${set.setNumber}`;
         await hypertrophyDb.workoutSets.put({
           id: setId,
-          sessionId: this.sessionId,
+          sessionId: session.id,
           exerciseId: exercise.id,
           setNumber: set.setNumber,
           weightKg: set.weightKg,

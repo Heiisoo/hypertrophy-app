@@ -50,10 +50,10 @@
           ><span>minutes</span>
         </div>
       </div>
-      <a class="primary-button" routerLink="/seance">
-        Commencer la séance
+      <button class="primary-button" type="button" (click)="startSession()">
+        {{ workout.activeSession() ? 'Reprendre la séance' : 'Commencer la séance' }}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-      </a>
+      </button>
     } @else {
       <div class="recovery-callout">
         <span>Récupération</span>

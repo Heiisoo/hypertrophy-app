@@ -1,0 +1,72 @@
+<section class="page stats-page">
+  <header>
+    <p class="eyebrow">Progression</p>
+    <h1>Statistiques</h1>
+    <p>Des chiffres utiles, calculés à partir de tes séances terminées.</p>
+  </header>
+
+  <section class="summary-grid" aria-label="Résumé des statistiques">
+    <article class="surface-card featured">
+      <span>Cette semaine</span>
+      <strong>{{ weeklySessions() }}</strong>
+      <small>séances terminées</small>
+    </article>
+    <article class="surface-card">
+      <span>Durée totale</span>
+      <strong>{{ formatDuration(totalDurationSeconds()) }}</strong>
+      <small>hors temps de pause</small>
+    </article>
+    <article class="surface-card">
+      <span>Durée moyenne</span>
+      <strong>{{ formatDuration(averageDurationSeconds()) }}</strong>
+      <small>par séance</small>
+    </article>
+    <article class="surface-card">
+      <span>Volume total</span>
+      <strong>{{ totalVolume().toLocaleString('fr-FR') }}</strong>
+      <small>kg soulevés</small>
+    </article>
+  </section>
+
+  <article class="health-card surface-card">
+    <div class="health-icon">♥</div>
+    <div>
+      <span class="eyebrow">Apple Santé</span>
+      <h2>Prêt pour la future app iPhone</h2>
+      <p>
+        Les durées et le volume sont déjà structurés. Une version native pourra ajouter calories,
+        fréquence cardiaque et anneaux d'activité avec ton autorisation.
+      </p>
+    </div>
+    <span class="coming-soon">Version native</span>
+  </article>
+
+  <section class="history" aria-labelledby="history-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Historique</p>
+        <h2 id="history-title">Dernières séances</h2>
+      </div>
+      <span>{{ sessions().length }} total</span>
+    </div>
+
+    @if (sessions().length === 0) {
+      <article class="empty surface-card">
+        <strong>Ta première progression commence ici.</strong>
+        <p>Termine une séance pour afficher sa durée et son volume.</p>
+      </article>
+    } @else {
+      <div class="session-list">
+        @for (session of sessions().slice(0, 8); track session.id) {
+          <article class="surface-card">
+            <div>
+              <strong>{{ dayTitle(session.programDayId) }}</strong>
+              <span>{{ formatDate(session.finishedAt ?? session.startedAt) }}</span>
+            </div>
+            <strong>{{ formatDuration(session.durationSeconds ?? 0) }}</strong>
+          </article>
+        }
+      </div>
+    }
+  </section>
+</section>

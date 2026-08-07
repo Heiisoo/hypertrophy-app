@@ -365,7 +365,7 @@
   position: fixed;
   z-index: 30;
   left: 50%;
-  bottom: calc(92px + env(safe-area-inset-bottom));
+  bottom: calc(166px + env(safe-area-inset-bottom));
   width: min(calc(100% - 28px), 512px);
   transform: translateX(-50%);
   padding: 7px 17px 16px;
@@ -374,6 +374,52 @@
   background: rgb(31 31 33 / 97%);
   box-shadow: 0 22px 60px rgb(0 0 0 / 55%);
   backdrop-filter: blur(20px);
+}
+
+.finish-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  padding: 20px 20px calc(22px + env(safe-area-inset-bottom));
+  background: rgb(0 0 0 / 68%);
+  backdrop-filter: blur(8px);
+}
+.finish-dialog {
+  width: min(100%, 500px);
+  padding: 22px;
+}
+.finish-dialog h2 {
+  margin-top: 9px;
+  font-size: 1.45rem;
+  letter-spacing: -0.04em;
+}
+.finish-dialog p {
+  margin-top: 9px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.finish-dialog > div {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 9px;
+  margin-top: 20px;
+}
+.finish-dialog button {
+  min-height: 48px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 14px;
+  color: var(--color-silver);
+  background: rgb(255 255 255 / 4%);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.finish-dialog .confirm {
+  border-color: rgb(122 52 40 / 50%);
+  color: #fff3ef;
+  background: linear-gradient(135deg, #854034, #5a2e24);
 }
 .timer-handle {
   width: 34px;
