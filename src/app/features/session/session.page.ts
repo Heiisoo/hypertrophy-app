@@ -67,6 +67,7 @@ export class SessionPage implements OnDestroy {
   protected readonly timerLabel = computed(() => this.formatTimer(this.restSeconds()));
   protected readonly previousPerformance = signal('Aucune donnée locale');
   protected readonly finishConfirmationVisible = signal(false);
+  protected readonly sessionStarting = signal(false);
 
   private readonly setCache = new Map<string, readonly EditableSet[]>();
   private readonly previousLabels = new Map<string, string>();
@@ -77,7 +78,7 @@ export class SessionPage implements OnDestroy {
       this.setCache.set(exercise.id, this.createSets(exercise));
     }
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
-    void this.initializeSession();
+    void this.initializePage();
   }
 
   ngOnDestroy(): void {
@@ -135,6 +136,7 @@ export class SessionPage implements OnDestroy {
   }
 
   protected async finishSession(): Promise<void> {
+    if (!this.workout.activeSession()) return;
     const remaining = this.totalSets() - this.completedTotal();
     if (remaining > 0) {
       this.finishConfirmationVisible.set(true);
@@ -155,14 +157,34 @@ export class SessionPage implements OnDestroy {
     await this.router.navigate(['/accueil']);
   }
 
-  private async initializeSession(): Promise<void> {
-    const session = await this.workout.start(this.day().id);
+  protected async startSession(): Promise<void> {
+    if (this.sessionStarting()) return;
+    this.sessionStarting.set(true);
+    try {
+      const session = await this.workout.start(this.day().id);
+      await this.prepareSession(session.id);
+    } finally {
+      this.sessionStarting.set(false);
+    }
+  }
+
+  private async initializePage(): Promise<void> {
+    await this.workout.whenReady();
+    const session = this.workout.activeSession();
+    if (session) {
+      await this.prepareSession(session.id);
+      return;
+    }
+    await this.hydratePreviousSets();
+  }
+
+  private async prepareSession(sessionId: string): Promise<void> {
     for (const exercise of this.day().exercises) {
       if (!this.setCache.has(exercise.id))
         this.setCache.set(exercise.id, this.createSets(exercise));
     }
-    await this.hydratePreviousSets(session.id);
-    await this.hydrateActiveSets(session.id);
+    await this.hydratePreviousSets(sessionId);
+    await this.hydrateActiveSets(sessionId);
   }
 
   private async hydrateActiveSets(sessionId: string): Promise<void> {
@@ -235,7 +257,7 @@ export class SessionPage implements OnDestroy {
     }));
   }
 
-  private async hydratePreviousSets(activeSessionId: string): Promise<void> {
+  private async hydratePreviousSets(activeSessionId?: string): Promise<void> {
     await Promise.all(
       this.day().exercises.map(async (exercise) => {
         const previous = await this.history.previousSets(exercise.id, activeSessionId);
@@ -300,7 +322,8 @@ export class SessionPage implements OnDestroy {
   }
 
   private async persistSet(exercise: ExercisePrescription, set: EditableSet): Promise<void> {
-    const session = await this.workout.start(this.day().id);
+    const session = this.workout.activeSession();
+    if (!session) return;
     const now = new Date().toISOString();
     await hypertrophyDb.transaction(
       'rw',
