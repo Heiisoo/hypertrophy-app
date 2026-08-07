@@ -459,6 +459,11 @@
 .cycle-builder strong {
   font-size: 0.78rem;
 }
+.cycle-builder small {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
 .cycle-builder button {
   min-height: 40px;
   padding: 0 11px;

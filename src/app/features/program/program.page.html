@@ -98,7 +98,14 @@
                   <button type="button" [disabled]="$last" (click)="store.moveDay(day.id, 1)">
                     ↓ Descendre
                   </button>
-                  <button class="danger" type="button" (click)="removeDay(day)">Supprimer</button>
+                  <button
+                    class="danger"
+                    type="button"
+                    [disabled]="store.program().days.length === 1"
+                    (click)="removeDay(day)"
+                  >
+                    Supprimer
+                  </button>
                 </div>
                 <label class="edit-field">
                   <span>Nom de la journée</span>
@@ -199,7 +206,8 @@
     <section class="cycle-builder surface-card">
       <div>
         <span class="eyebrow">Rotation personnalisée</span>
-        <strong>Ajouter un jour au cycle</strong>
+        <strong>Nombre de jours entièrement libre</strong>
+        <small>Ajoute ou retire des journées pour créer ton propre rythme.</small>
       </div>
       <button type="button" (click)="addDay('training')">+ Entraînement</button>
       <button type="button" (click)="addDay('recovery')">+ Repos</button>
