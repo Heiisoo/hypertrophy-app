@@ -34,6 +34,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/session/session.page').then((component) => component.SessionPage),
       },
+      {
+        path: 'stats',
+        title: 'Statistiques · Hypertrophy',
+        loadComponent: () =>
+          import('./features/stats/stats.page').then((component) => component.StatsPage),
+      },
     ],
   },
   {

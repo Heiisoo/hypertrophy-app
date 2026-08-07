@@ -40,6 +40,9 @@ export interface WorkoutSession {
   readonly startedAt: string;
   readonly finishedAt?: string;
   readonly status: SessionStatus;
+  readonly pausedAt?: string;
+  readonly accumulatedPausedSeconds?: number;
+  readonly durationSeconds?: number;
 }
 
 export interface WorkoutSet {

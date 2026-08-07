@@ -27,11 +27,14 @@ export class HistoryService {
     );
   }
 
-  async previousSets(exerciseId: string): Promise<readonly WorkoutSet[]> {
+  async previousSets(
+    exerciseId: string,
+    excludedSessionId?: string,
+  ): Promise<readonly WorkoutSet[]> {
     const sets = await hypertrophyDb.workoutSets
       .where('exerciseId')
       .equals(exerciseId)
-      .filter((set) => Boolean(set.completedAt))
+      .filter((set) => Boolean(set.completedAt) && set.sessionId !== excludedSessionId)
       .toArray();
     sets.sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
     const latestSessionId = sets[0]?.sessionId;
