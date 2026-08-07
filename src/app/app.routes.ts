@@ -1,6 +1,13 @@
 import { Routes } from '@angular/router';
+import { onboardingGuard } from './core/guards/onboarding.guard';
 
 export const routes: Routes = [
+  {
+    path: 'bienvenue',
+    title: 'Bienvenue · Hypertrophy',
+    loadComponent: () =>
+      import('./features/welcome/welcome.page').then((component) => component.WelcomePage),
+  },
   {
     path: 'connexion',
     title: 'Connexion · Hypertrophy',
@@ -9,6 +16,7 @@ export const routes: Routes = [
   },
   {
     path: '',
+    canActivate: [onboardingGuard],
     loadComponent: () => import('./layout/app-shell').then((component) => component.AppShell),
     children: [
       {

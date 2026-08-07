@@ -1,8 +1,9 @@
-import { Injectable, OnDestroy, computed, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, effect, signal } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
 import { WorkoutSession } from '../models/training.models';
 import { HistoryService } from './history.service';
 import { SyncService } from './sync.service';
+import { AuthStore } from './auth-store';
 
 @Injectable({ providedIn: 'root' })
 export class WorkoutSessionService implements OnDestroy {
@@ -17,14 +18,21 @@ export class WorkoutSessionService implements OnDestroy {
   readonly elapsedLabel = computed(() => this.formatDuration(this.elapsedSeconds()));
 
   private readonly clock = signal(Date.now());
-  private readonly hydration: Promise<void>;
+  private hydration: Promise<void> = Promise.resolve();
   private readonly timerId: ReturnType<typeof setInterval>;
+  private hydratedOwnerId = '';
 
   constructor(
     private readonly sync: SyncService,
     private readonly history: HistoryService,
+    private readonly auth: AuthStore,
   ) {
-    this.hydration = this.hydrateActiveSession();
+    effect(() => {
+      const ownerId = this.auth.user()?.id ?? 'local';
+      if (ownerId === this.hydratedOwnerId) return;
+      this.hydratedOwnerId = ownerId;
+      this.hydration = this.hydrateActiveSession(ownerId);
+    });
     this.timerId = setInterval(() => this.clock.set(Date.now()), 1000);
   }
 
@@ -44,6 +52,7 @@ export class WorkoutSessionService implements OnDestroy {
     const now = new Date().toISOString();
     const session: WorkoutSession = {
       id: `session-${crypto.randomUUID()}`,
+      ownerId: this.auth.user()?.id ?? 'local',
       programDayId,
       startedAt: now,
       status: 'active',
@@ -111,8 +120,14 @@ export class WorkoutSessionService implements OnDestroy {
     return `${hours}:${minutes}:${seconds}`;
   }
 
-  private async hydrateActiveSession(): Promise<void> {
-    const sessions = await hypertrophyDb.workoutSessions.where('status').equals('active').toArray();
+  private async hydrateActiveSession(ownerId: string): Promise<void> {
+    await this.auth.whenReady();
+    const currentOwnerId = this.auth.user()?.id ?? 'local';
+    if (currentOwnerId !== ownerId) return this.hydrateActiveSession(currentOwnerId);
+    const sessions = await hypertrophyDb.workoutSessions
+      .where('[ownerId+status]')
+      .equals([ownerId, 'active'])
+      .toArray();
     sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     this.activeSession.set(sessions[0] ?? null);
     this.ready.set(true);
@@ -139,6 +154,7 @@ export class WorkoutSessionService implements OnDestroy {
         await hypertrophyDb.workoutSessions.put(session);
         await hypertrophyDb.syncQueue.where('entityId').equals(session.id).delete();
         await hypertrophyDb.syncQueue.add({
+          ownerId: session.ownerId,
           entityType: 'session',
           entityId: session.id,
           operation: 'upsert',

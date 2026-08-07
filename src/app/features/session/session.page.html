@@ -118,6 +118,30 @@
           >
         </div>
 
+        <div class="exercise-media">
+          @if (exercise.videoUrl) {
+            <video
+              controls
+              playsinline
+              preload="metadata"
+              [poster]="exercise.imageUrl ?? ''"
+              [src]="exercise.videoUrl"
+            ></video>
+          } @else if (exercise.imageUrl) {
+            <img [src]="exercise.imageUrl" [alt]="'Démonstration de ' + exercise.name" />
+          } @else {
+            <div class="exercise-illustration" aria-label="Illustration de l'exercice">
+              <svg viewBox="0 0 120 72" aria-hidden="true">
+                <path d="M20 36h18m44 0h18M38 27v18m44-18v18M38 36h44" />
+                <circle cx="60" cy="17" r="7" />
+                <path d="M60 24v20m0-12-13 10m13-10 13 10M60 44 49 61m11-17 11 17" />
+              </svg>
+              <span>{{ exercise.category }}</span>
+              <small>Ajoute une illustration ou une vidéo depuis « Programme ».</small>
+            </div>
+          }
+        </div>
+
         <div class="previous-performance">
           <span>Dernière performance</span>
           <strong>{{ previousPerformance() }}</strong>

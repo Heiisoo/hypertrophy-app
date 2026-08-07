@@ -1,22 +1,38 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, effect, signal } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
-import { WorkoutSet } from '../models/training.models';
+import { WorkoutSession, WorkoutSet } from '../models/training.models';
+import { AuthStore } from './auth-store';
 
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
   readonly completedSessionCount = signal(0);
+  readonly completedSessions = signal<readonly WorkoutSession[]>([]);
   readonly bestSet = signal<WorkoutSet | null>(null);
 
-  constructor() {
-    void this.refresh();
+  constructor(private readonly auth: AuthStore) {
+    effect(() => {
+      this.auth.user();
+      void this.refresh();
+    });
   }
 
   async refresh(): Promise<void> {
-    const [sessionCount, sets] = await Promise.all([
-      hypertrophyDb.workoutSessions.where('status').equals('completed').count(),
-      hypertrophyDb.workoutSets.filter((set) => Boolean(set.completedAt)).toArray(),
+    await this.auth.whenReady();
+    const ownerId = this.auth.user()?.id ?? 'local';
+    const [sessions, sets] = await Promise.all([
+      hypertrophyDb.workoutSessions
+        .where('[ownerId+status]')
+        .equals([ownerId, 'completed'])
+        .toArray(),
+      hypertrophyDb.workoutSets
+        .where('ownerId')
+        .equals(ownerId)
+        .filter((set) => Boolean(set.completedAt))
+        .toArray(),
     ]);
-    this.completedSessionCount.set(sessionCount);
+    sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    this.completedSessions.set(sessions);
+    this.completedSessionCount.set(sessions.length);
     this.bestSet.set(
       sets.reduce<WorkoutSet | null>((best, current) => {
         if (!best) return current;
@@ -31,9 +47,11 @@ export class HistoryService {
     exerciseId: string,
     excludedSessionId?: string,
   ): Promise<readonly WorkoutSet[]> {
+    await this.auth.whenReady();
+    const ownerId = this.auth.user()?.id ?? 'local';
     const sets = await hypertrophyDb.workoutSets
-      .where('exerciseId')
-      .equals(exerciseId)
+      .where('[ownerId+exerciseId]')
+      .equals([ownerId, exerciseId])
       .filter((set) => Boolean(set.completedAt) && set.sessionId !== excludedSessionId)
       .toArray();
     sets.sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));

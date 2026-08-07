@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { hypertrophyDb } from '../../core/database/hypertrophy.database';
 import { WorkoutSession, WorkoutSet } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
+import { AuthStore } from '../../core/services/auth-store';
 
 @Component({
   selector: 'app-stats-page',
@@ -13,6 +14,7 @@ import { WorkoutSessionService } from '../../core/services/workout-session.servi
 export class StatsPage {
   protected readonly store = inject(ProgramStore);
   protected readonly workout = inject(WorkoutSessionService);
+  private readonly auth = inject(AuthStore);
   protected readonly sessions = signal<readonly WorkoutSession[]>([]);
   protected readonly sets = signal<readonly WorkoutSet[]>([]);
 
@@ -34,7 +36,10 @@ export class StatsPage {
   });
 
   constructor() {
-    void this.refresh();
+    effect(() => {
+      this.auth.user();
+      void this.refresh();
+    });
   }
 
   protected dayTitle(programDayId: string): string {
@@ -59,9 +64,18 @@ export class StatsPage {
   }
 
   private async refresh(): Promise<void> {
+    await this.auth.whenReady();
+    const ownerId = this.auth.user()?.id ?? 'local';
     const [sessions, sets] = await Promise.all([
-      hypertrophyDb.workoutSessions.where('status').equals('completed').toArray(),
-      hypertrophyDb.workoutSets.filter((set) => Boolean(set.completedAt)).toArray(),
+      hypertrophyDb.workoutSessions
+        .where('[ownerId+status]')
+        .equals([ownerId, 'completed'])
+        .toArray(),
+      hypertrophyDb.workoutSets
+        .where('ownerId')
+        .equals(ownerId)
+        .filter((set) => Boolean(set.completedAt))
+        .toArray(),
     ]);
     sessions.sort((a, b) =>
       (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),

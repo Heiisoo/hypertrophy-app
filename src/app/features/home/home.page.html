@@ -66,29 +66,33 @@
     }
   </article>
 
-  <section class="section-block" aria-labelledby="week-title">
+  <section class="section-block" aria-labelledby="cycle-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Cette semaine</p>
-        <h2 id="week-title">Ton rythme</h2>
+        <p class="eyebrow">Cycle en cours · {{ store.program().days.length }} jours</p>
+        <h2 id="cycle-title">Ton rythme réel</h2>
       </div>
-      <span>3 / 6</span>
+      <span>{{ completedCycleSessions() }} / {{ cycleTrainingDays().length }}</span>
     </div>
     <div class="week-card surface-card">
-      <div class="week-days" aria-label="Progression hebdomadaire">
+      <div
+        class="week-days"
+        aria-label="Progression du cycle"
+        [style.grid-template-columns]="'repeat(' + store.program().days.length + ', minmax(30px, 1fr))'"
+      >
         @for (day of store.program().days; track day.id; let index = $index) {
           <div
-            [class.done]="index < 4"
+            [class.done]="completedDayIds().has(day.id)"
             [class.current]="day.id === store.today().id"
             [class.rest]="day.kind === 'recovery'"
           >
-            <span>{{ ['L', 'M', 'M', 'J', 'V', 'S', 'D'][index] }}</span>
-            <i>{{ day.kind === 'recovery' ? '—' : index < 4 ? '✓' : '' }}</i>
+            <span>J{{ day.dayNumber }}</span>
+            <i>{{ day.kind === 'recovery' ? '—' : completedDayIds().has(day.id) ? '✓' : '' }}</i>
           </div>
         }
       </div>
-      <div class="progress-track"><span></span></div>
-      <p><strong>50 %</strong> de la semaine complétée</p>
+      <div class="progress-track"><span [style.width.%]="cycleProgress()"></span></div>
+      <p><strong>{{ cycleProgress() }} %</strong> du cycle complété d’après tes vraies séances</p>
     </div>
   </section>
 

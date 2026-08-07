@@ -3,6 +3,7 @@ import { SEED_PROGRAM } from '../../data/seed-program';
 import { hypertrophyDb } from '../database/hypertrophy.database';
 import { Json } from '../database/database.types';
 import {
+  ExerciseCatalogItem,
   ExercisePrescription,
   ProgramDay,
   TrainingProgram,
@@ -10,7 +11,9 @@ import {
 import { supabase } from '../supabase/supabase.client';
 import { AuthStore } from './auth-store';
 
-type ProgramDetailsPatch = Partial<Pick<TrainingProgram, 'name' | 'description'>>;
+type ProgramDetailsPatch = Partial<
+  Pick<TrainingProgram, 'name' | 'description' | 'rotationStartedAt'>
+>;
 type ProgramDayPatch = Partial<
   Pick<ProgramDay, 'title' | 'shortTitle' | 'focus' | 'durationMinutes'>
 >;
@@ -19,7 +22,7 @@ type ExercisePatch = Partial<Omit<ExercisePrescription, 'id'>>;
 @Injectable({ providedIn: 'root' })
 export class ProgramStore implements OnDestroy {
   private readonly auth = inject(AuthStore);
-  private readonly programState = signal<TrainingProgram>(structuredClone(SEED_PROGRAM));
+  private readonly programState = signal<TrainingProgram>(this.createRecommendedProgram());
   private readonly ownerState = signal('local');
   private loadGeneration = 0;
 
@@ -29,12 +32,24 @@ export class ProgramStore implements OnDestroy {
   readonly saveLabel = signal('Programme local');
   readonly isPersonal = computed(() => this.ownerState() !== 'local');
 
+  readonly currentDayIndex = computed(() => {
+    const program = this.programState();
+    const dayCount = program.days.length;
+    if (dayCount === 0) return 0;
+    const elapsedDays = this.daysBetween(program.rotationStartedAt ?? this.dateKey(), this.dateKey());
+    return ((elapsedDays % dayCount) + dayCount) % dayCount;
+  });
   readonly today = computed<ProgramDay>(() => {
-    const dayNumber = new Date().getDay() === 0 ? 7 : new Date().getDay();
-    return (
-      this.programState().days.find((day) => day.dayNumber === dayNumber) ??
-      this.programState().days[0]
-    );
+    const days = this.programState().days;
+    return days[this.currentDayIndex()] ?? days[0] ?? this.createRecoveryDay(1);
+  });
+  readonly currentCycleStartedAt = computed(() => {
+    const program = this.programState();
+    const dayCount = Math.max(1, program.days.length);
+    const rotationStart = program.rotationStartedAt ?? this.dateKey();
+    const elapsedDays = this.daysBetween(rotationStart, this.dateKey());
+    const completedCycles = Math.floor(elapsedDays / dayCount);
+    return this.addDays(rotationStart, completedCycles * dayCount);
   });
 
   private readonly handleOnline = () => void this.syncCurrentProgram();
@@ -106,6 +121,73 @@ export class ProgramStore implements OnDestroy {
     return id;
   }
 
+  async addCatalogExercise(dayId: string, catalogExercise: ExerciseCatalogItem): Promise<void> {
+    const exercise: ExercisePrescription = {
+      id: catalogExercise.id,
+      name: catalogExercise.name,
+      category: catalogExercise.category,
+      sets: 3,
+      repRange: '8–12',
+      targetRir: '1',
+      restSeconds: 120,
+      cue: catalogExercise.instructions,
+      imageUrl: catalogExercise.imageUrl,
+      videoUrl: catalogExercise.videoUrl,
+    };
+    await this.persist({
+      ...this.programState(),
+      days: this.programState().days.map((day) =>
+        day.id === dayId ? { ...day, exercises: [...day.exercises, exercise] } : day,
+      ),
+    });
+  }
+
+  async addDay(kind: 'training' | 'recovery'): Promise<void> {
+    const dayNumber = this.programState().days.length + 1;
+    const day =
+      kind === 'training'
+        ? {
+            id: `custom-day-${crypto.randomUUID()}`,
+            dayNumber,
+            title: 'Nouvel entraînement',
+            shortTitle: 'Séance',
+            focus: 'À personnaliser',
+            kind: 'training' as const,
+            durationMinutes: 60,
+            exercises: [],
+          }
+        : this.createRecoveryDay(dayNumber);
+    await this.persist({
+      ...this.programState(),
+      days: [...this.programState().days, day],
+    });
+  }
+
+  async removeDay(dayId: string): Promise<void> {
+    if (this.programState().days.length <= 2) return;
+    await this.persist({
+      ...this.programState(),
+      days: this.programState().days.filter((day) => day.id !== dayId),
+    });
+  }
+
+  async moveDay(dayId: string, direction: -1 | 1): Promise<void> {
+    const days = [...this.programState().days];
+    const currentIndex = days.findIndex((day) => day.id === dayId);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= days.length) return;
+    const currentDay = days[currentIndex];
+    const targetDay = days[targetIndex];
+    if (!currentDay || !targetDay) return;
+    days[currentIndex] = targetDay;
+    days[targetIndex] = currentDay;
+    await this.persist({ ...this.programState(), days });
+  }
+
+  async resetCycleToday(): Promise<void> {
+    await this.updateProgram({ rotationStartedAt: this.dateKey() });
+  }
+
   async removeExercise(dayId: string, exerciseId: string): Promise<void> {
     await this.persist({
       ...this.programState(),
@@ -142,7 +224,7 @@ export class ProgramStore implements OnDestroy {
   }
 
   async restoreDefault(): Promise<void> {
-    await this.persist(structuredClone(SEED_PROGRAM));
+    await this.persist(this.createRecommendedProgram());
   }
 
   private async hydrate(ownerId: string): Promise<void> {
@@ -151,7 +233,7 @@ export class ProgramStore implements OnDestroy {
     try {
       await hypertrophyDb.seedIfNeeded();
       const localRecord = await hypertrophyDb.userPrograms.get(ownerId);
-      let chosenProgram = localRecord?.program ?? structuredClone(SEED_PROGRAM);
+      let chosenProgram = localRecord?.program ?? this.createRecommendedProgram();
       let chosenUpdatedAt = localRecord?.updatedAt ?? SEED_PROGRAM.createdAt;
 
       if (ownerId !== 'local' && navigator.onLine) {
@@ -173,6 +255,13 @@ export class ProgramStore implements OnDestroy {
         }
       }
 
+      const normalizedProgram = this.normalizeHydratedProgram(chosenProgram);
+      const programWasMigrated = JSON.stringify(normalizedProgram) !== JSON.stringify(chosenProgram);
+      chosenProgram = normalizedProgram;
+      if (programWasMigrated && ownerId !== 'local' && navigator.onLine) {
+        await this.upsertCloud(ownerId, chosenProgram);
+        chosenUpdatedAt = new Date().toISOString();
+      }
       if (generation !== this.loadGeneration) return;
       await hypertrophyDb.userPrograms.put({
         ownerId,
@@ -189,6 +278,7 @@ export class ProgramStore implements OnDestroy {
   private async persist(program: TrainingProgram): Promise<void> {
     const ownerId = this.ownerState();
     const updatedAt = new Date().toISOString();
+    program = this.renumberDays(program);
     this.programState.set(program);
     this.saving.set(true);
     await hypertrophyDb.userPrograms.put({ ownerId, program, updatedAt });
@@ -227,5 +317,71 @@ export class ProgramStore implements OnDestroy {
       typeof candidate['name'] === 'string' &&
       Array.isArray(candidate['days'])
     );
+  }
+
+  private createRecommendedProgram(): TrainingProgram {
+    return {
+      ...structuredClone(SEED_PROGRAM),
+      rotationStartedAt: this.dateKey(),
+    };
+  }
+
+  private normalizeHydratedProgram(program: TrainingProgram): TrainingProgram {
+    const hasSecondRecoveryDay = program.days.some((day) => day.id === 'day-8-recovery');
+    const recommendedDayEight = SEED_PROGRAM.days.find((day) => day.id === 'day-8-recovery');
+    const days =
+      program.days.length === 7 && !hasSecondRecoveryDay && recommendedDayEight
+        ? [...program.days, structuredClone(recommendedDayEight)]
+        : program.days;
+    return this.renumberDays({
+      ...program,
+      description:
+        program.description ===
+        'Split 7 jours orienté V-taper, épaules, haut des pectoraux et performance.'
+          ? SEED_PROGRAM.description
+          : program.description,
+      rotationStartedAt: program.rotationStartedAt ?? this.dateKey(),
+      days,
+    });
+  }
+
+  private renumberDays(program: TrainingProgram): TrainingProgram {
+    return {
+      ...program,
+      days: program.days.map((day, index) => ({ ...day, dayNumber: index + 1 })),
+    };
+  }
+
+  private createRecoveryDay(dayNumber: number): ProgramDay {
+    return {
+      id: `recovery-${crypto.randomUUID()}`,
+      dayNumber,
+      title: 'Récupération active',
+      shortTitle: 'Repos',
+      focus: 'Faire redescendre la fatigue',
+      kind: 'recovery',
+      durationMinutes: 30,
+      exercises: [],
+      recoveryItems: ['Marche légère', 'Mobilité', 'Hydratation et sommeil'],
+    };
+  }
+
+  private dateKey(date = new Date()): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private daysBetween(from: string, to: string): number {
+    const fromDate = new Date(`${from}T00:00:00`);
+    const toDate = new Date(`${to}T00:00:00`);
+    return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000);
+  }
+
+  private addDays(date: string, amount: number): string {
+    const value = new Date(`${date}T00:00:00`);
+    value.setDate(value.getDate() + amount);
+    return this.dateKey(value);
   }
 }

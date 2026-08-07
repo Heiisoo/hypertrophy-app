@@ -369,6 +369,7 @@ export class SessionPage implements OnDestroy {
         const setId = `${session.id}-${exercise.id}-${set.setNumber}`;
         await hypertrophyDb.workoutSets.put({
           id: setId,
+          ownerId: session.ownerId,
           sessionId: session.id,
           exerciseId: exercise.id,
           setNumber: set.setNumber,
@@ -377,19 +378,21 @@ export class SessionPage implements OnDestroy {
           rir: set.rir,
           completedAt: set.completed ? now : undefined,
         });
-        await this.replaceQueueItem('set', setId, now);
+        await this.replaceQueueItem(session.ownerId, 'set', setId, now);
       },
     );
     await this.sync.notifyQueueChanged();
   }
 
   private async replaceQueueItem(
+    ownerId: string,
     entityType: 'session' | 'set',
     entityId: string,
     createdAt: string,
   ): Promise<void> {
     await hypertrophyDb.syncQueue.where('entityId').equals(entityId).delete();
     await hypertrophyDb.syncQueue.add({
+      ownerId,
       entityType,
       entityId,
       operation: 'upsert',

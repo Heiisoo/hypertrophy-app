@@ -1,6 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ExercisePrescription, ProgramDay } from '../../core/models/training.models';
+import {
+  ExerciseCatalogItem,
+  ExercisePrescription,
+  ProgramDay,
+} from '../../core/models/training.models';
+import { ExerciseCatalogService } from '../../core/services/exercise-catalog.service';
 import { ProgramStore } from '../../core/services/program-store';
 
 interface ExerciseDraft {
@@ -11,6 +16,8 @@ interface ExerciseDraft {
   readonly targetRir: string;
   readonly restSeconds: number;
   readonly cue: string;
+  readonly imageUrl: string;
+  readonly videoUrl: string;
 }
 
 @Component({
@@ -22,10 +29,34 @@ interface ExerciseDraft {
 })
 export class ProgramPage {
   protected readonly store = inject(ProgramStore);
+  protected readonly catalog = inject(ExerciseCatalogService);
   protected readonly expandedDayId = signal(this.store.today().id);
   protected readonly editing = signal(false);
   protected readonly editor = signal<{ dayId: string; exerciseId: string } | null>(null);
   protected readonly draft = signal<ExerciseDraft | null>(null);
+  protected readonly catalogDayId = signal('');
+  protected readonly catalogSearch = signal('');
+  protected readonly catalogCategory = signal('');
+  protected readonly trainingDayCount = computed(
+    () => this.store.program().days.filter((day) => day.kind === 'training').length,
+  );
+  protected readonly recoveryDayCount = computed(
+    () => this.store.program().days.filter((day) => day.kind === 'recovery').length,
+  );
+  protected readonly filteredCatalog = computed(() => {
+    const query = this.catalogSearch().trim().toLocaleLowerCase('fr');
+    const category = this.catalogCategory();
+    return this.catalog
+      .exercises()
+      .filter((exercise) => !category || exercise.category === category)
+      .filter((exercise) => {
+        if (!query) return true;
+        return [exercise.name, exercise.category, exercise.equipment, ...exercise.aliases]
+          .filter(Boolean)
+          .some((value) => value?.toLocaleLowerCase('fr').includes(query));
+      })
+      .slice(0, 80);
+  });
 
   protected toggleDay(dayId: string): void {
     this.expandedDayId.update((current) => (current === dayId ? '' : dayId));
@@ -67,6 +98,8 @@ export class ProgramPage {
       targetRir: exercise.targetRir,
       restSeconds: exercise.restSeconds,
       cue: exercise.cue ?? '',
+      imageUrl: exercise.imageUrl ?? '',
+      videoUrl: exercise.videoUrl ?? '',
     });
   }
 
@@ -97,6 +130,8 @@ export class ProgramPage {
       repRange: draft.repRange.trim() || '8–12',
       targetRir: draft.targetRir.trim() || '1',
       cue: draft.cue.trim() || undefined,
+      imageUrl: draft.imageUrl.trim() || undefined,
+      videoUrl: draft.videoUrl.trim() || undefined,
     });
     this.closeEditor();
   }
@@ -108,6 +143,43 @@ export class ProgramPage {
       .days.find((day) => day.id === dayId)
       ?.exercises.find((candidate) => candidate.id === exerciseId);
     if (exercise) this.openEditor(dayId, exercise);
+  }
+
+  protected openCatalog(dayId: string): void {
+    this.catalogDayId.set(dayId);
+    this.catalogSearch.set('');
+    this.catalogCategory.set('');
+    void this.catalog.load();
+  }
+
+  protected closeCatalog(): void {
+    this.catalogDayId.set('');
+  }
+
+  protected catalogExerciseAdded(exerciseId: string): boolean {
+    const day = this.store.program().days.find((candidate) => candidate.id === this.catalogDayId());
+    return Boolean(day?.exercises.some((exercise) => exercise.id === exerciseId));
+  }
+
+  protected async selectCatalogExercise(exercise: ExerciseCatalogItem): Promise<void> {
+    const dayId = this.catalogDayId();
+    if (!dayId || this.catalogExerciseAdded(exercise.id)) return;
+    await this.store.addCatalogExercise(dayId, exercise);
+    this.closeCatalog();
+  }
+
+  protected async addDay(kind: 'training' | 'recovery'): Promise<void> {
+    await this.store.addDay(kind);
+    this.expandedDayId.set(this.store.program().days.at(-1)?.id ?? '');
+  }
+
+  protected removeDay(day: ProgramDay): void {
+    if (!window.confirm(`Supprimer le jour ${day.dayNumber} « ${day.title} » ?`)) return;
+    void this.store.removeDay(day.id);
+  }
+
+  protected resetCycle(): void {
+    void this.store.resetCycleToday();
   }
 
   protected removeExercise(dayId: string, exercise: ExercisePrescription): void {
