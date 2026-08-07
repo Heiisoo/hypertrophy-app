@@ -1,7 +1,7 @@
 <section class="page home-page">
   <header class="topbar">
     <a class="brand" routerLink="/accueil" aria-label="Hypertrophy, accueil">
-      <span class="brand-mark">H</span>
+      <img class="brand-mark" src="/icons/icon-192x192.png" alt="" />
       <span>HYPERTROPHY</span>
     </a>
     <a
@@ -78,7 +78,9 @@
       <div
         class="week-days"
         aria-label="Progression du cycle"
-        [style.grid-template-columns]="'repeat(' + store.program().days.length + ', minmax(30px, 1fr))'"
+        [style.grid-template-columns]="
+          'repeat(' + store.program().days.length + ', minmax(30px, 1fr))'
+        "
       >
         @for (day of store.program().days; track day.id; let index = $index) {
           <div
@@ -92,7 +94,9 @@
         }
       </div>
       <div class="progress-track"><span [style.width.%]="cycleProgress()"></span></div>
-      <p><strong>{{ cycleProgress() }} %</strong> du cycle complété d’après tes vraies séances</p>
+      <p>
+        <strong>{{ cycleProgress() }} %</strong> du cycle complété d’après tes vraies séances
+      </p>
     </div>
   </section>
 

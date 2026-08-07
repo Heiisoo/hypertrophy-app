@@ -25,13 +25,11 @@
 .brand-mark {
   width: 32px;
   height: 32px;
-  display: grid;
-  place-items: center;
+  display: block;
   border: 1px solid rgb(184 165 138 / 40%);
   border-radius: 10px;
-  color: var(--color-champagne);
   background: linear-gradient(145deg, #282628, #151516);
-  font-size: 0.86rem;
+  object-fit: cover;
 }
 
 .local-badge {

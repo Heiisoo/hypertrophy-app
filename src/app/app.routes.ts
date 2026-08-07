@@ -15,6 +15,14 @@ export const routes: Routes = [
       import('./features/auth/auth.page').then((component) => component.AuthPage),
   },
   {
+    path: 'nouveau-mot-de-passe',
+    title: 'Nouveau mot de passe · Hypertrophy',
+    loadComponent: () =>
+      import('./features/password-reset/password-reset.page').then(
+        (component) => component.PasswordResetPage,
+      ),
+  },
+  {
     path: '',
     canActivate: [onboardingGuard],
     loadComponent: () => import('./layout/app-shell').then((component) => component.AppShell),

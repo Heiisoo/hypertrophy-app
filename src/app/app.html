@@ -1,1 +1,13 @@
 <router-outlet />
+
+@if (updates.available()) {
+  <aside class="update-banner" role="status">
+    <div>
+      <strong>Nouvelle version prête</strong>
+      <span>Mets l’app à jour sans perdre tes données.</span>
+    </div>
+    <button type="button" [disabled]="updates.applying()" (click)="updates.apply()">
+      {{ updates.applying() ? 'Mise à jour…' : 'Actualiser' }}
+    </button>
+  </aside>
+}
