@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { ExerciseCatalogItem } from '../models/training.models';
+import { ExerciseCatalogItem, ExercisePrescription } from '../models/training.models';
 import { supabase } from '../supabase/supabase.client';
 
 @Injectable({ providedIn: 'root' })
@@ -19,40 +19,110 @@ export class ExerciseCatalogService {
     if (this.loaded || this.loading()) return;
     this.loading.set(true);
     this.error.set('');
-    const { data, error } = await supabase.from('exercises').select('*').order('name');
-    this.loading.set(false);
-    if (error) {
-      this.error.set('Catalogue indisponible hors connexion. Tu peux créer un exercice manuellement.');
-      return;
-    }
-    this.loaded = true;
-    const uniqueExercises = new Map<string, ExerciseCatalogItem>();
-    for (const exercise of data) {
-      const item: ExerciseCatalogItem = {
-        id: exercise.id,
-        name: exercise.name,
-        category: exercise.category,
-        equipment: exercise.equipment ?? undefined,
-        primaryMuscles: exercise.primary_muscles,
-        aliases: exercise.aliases,
-        instructions: exercise.instructions ?? undefined,
-        imageUrl: exercise.image_url ?? undefined,
-        videoUrl: exercise.video_url ?? undefined,
-      };
-      const key = exercise.name.trim().toLocaleLowerCase('fr-FR');
-      const current = uniqueExercises.get(key);
-      if (!current || this.detailScore(item) > this.detailScore(current)) {
-        uniqueExercises.set(key, item);
+
+    const [bundledResult, supabaseResult] = await Promise.all([
+      this.loadBundledCatalog(),
+      supabase.from('exercises').select('*').order('name'),
+    ]);
+
+    const merged = new Map<string, ExerciseCatalogItem>();
+    for (const exercise of bundledResult) this.addOrMerge(merged, exercise);
+
+    if (!supabaseResult.error) {
+      for (const exercise of supabaseResult.data) {
+        this.addOrMerge(merged, {
+          id: exercise.id,
+          name: exercise.name,
+          category: exercise.category,
+          equipment: exercise.equipment ?? undefined,
+          primaryMuscles: exercise.primary_muscles,
+          aliases: exercise.aliases,
+          instructions: exercise.instructions ?? undefined,
+          imageUrl: exercise.image_url ?? undefined,
+          videoUrl: exercise.video_url ?? undefined,
+        });
       }
     }
-    this.exercises.set(
-      [...uniqueExercises.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+
+    this.loading.set(false);
+    if (merged.size === 0) {
+      this.error.set(
+        'Catalogue indisponible hors connexion. Tu peux créer un exercice manuellement.',
+      );
+      return;
+    }
+
+    this.loaded = true;
+    this.exercises.set([...merged.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr')));
+  }
+
+  enrich(exercise: ExercisePrescription | undefined): ExercisePrescription | undefined {
+    if (!exercise) return undefined;
+    if (exercise.videoUrl && exercise.imageUrl && exercise.secondaryImageUrl) return exercise;
+    const match = this.findMatch(exercise.id, exercise.name);
+    if (!match) return exercise;
+    return {
+      ...exercise,
+      imageUrl: exercise.imageUrl ?? match.imageUrl,
+      secondaryImageUrl: exercise.secondaryImageUrl ?? match.secondaryImageUrl,
+      videoUrl: exercise.videoUrl ?? match.videoUrl,
+    };
+  }
+
+  private async loadBundledCatalog(): Promise<readonly ExerciseCatalogItem[]> {
+    try {
+      const response = await fetch('/data/exercises.json');
+      if (!response.ok) return [];
+      return (await response.json()) as readonly ExerciseCatalogItem[];
+    } catch {
+      return [];
+    }
+  }
+
+  private addOrMerge(
+    catalog: Map<string, ExerciseCatalogItem>,
+    exercise: ExerciseCatalogItem,
+  ): void {
+    const key = this.normalize(exercise.name);
+    const current = catalog.get(key);
+    if (!current) {
+      catalog.set(key, exercise);
+      return;
+    }
+    catalog.set(key, {
+      ...current,
+      id: exercise.id,
+      name: exercise.name,
+      category: exercise.category,
+      equipment: exercise.equipment ?? current.equipment,
+      primaryMuscles: [...new Set([...current.primaryMuscles, ...exercise.primaryMuscles])],
+      aliases: [...new Set([...current.aliases, ...exercise.aliases])],
+      instructions: exercise.instructions ?? current.instructions,
+      imageUrl: exercise.imageUrl ?? current.imageUrl,
+      secondaryImageUrl: exercise.secondaryImageUrl ?? current.secondaryImageUrl,
+      videoUrl: exercise.videoUrl ?? current.videoUrl,
+      sourceUrl: exercise.sourceUrl ?? current.sourceUrl,
+      license: exercise.license ?? current.license,
+    });
+  }
+
+  private findMatch(id: string, name: string): ExerciseCatalogItem | undefined {
+    const exactId = this.exercises().find((exercise) => exercise.id === id);
+    if (exactId) return exactId;
+    const normalizedName = this.normalize(name);
+    return this.exercises().find(
+      (exercise) =>
+        this.normalize(exercise.name) === normalizedName ||
+        exercise.aliases.some((alias) => this.normalize(alias) === normalizedName),
     );
   }
 
-  private detailScore(exercise: ExerciseCatalogItem): number {
-    return [exercise.equipment, exercise.instructions, exercise.imageUrl, exercise.videoUrl].filter(
-      Boolean,
-    ).length;
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('fr')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   }
 }

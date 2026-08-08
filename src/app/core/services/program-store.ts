@@ -36,7 +36,10 @@ export class ProgramStore implements OnDestroy {
     const program = this.programState();
     const dayCount = program.days.length;
     if (dayCount === 0) return 0;
-    const elapsedDays = this.daysBetween(program.rotationStartedAt ?? this.dateKey(), this.dateKey());
+    const elapsedDays = this.daysBetween(
+      program.rotationStartedAt ?? this.dateKey(),
+      this.dateKey(),
+    );
     return ((elapsedDays % dayCount) + dayCount) % dayCount;
   });
   readonly today = computed<ProgramDay>(() => {
@@ -75,17 +78,11 @@ export class ProgramStore implements OnDestroy {
   async updateDay(dayId: string, patch: ProgramDayPatch): Promise<void> {
     await this.persist({
       ...this.programState(),
-      days: this.programState().days.map((day) =>
-        day.id === dayId ? { ...day, ...patch } : day,
-      ),
+      days: this.programState().days.map((day) => (day.id === dayId ? { ...day, ...patch } : day)),
     });
   }
 
-  async updateExercise(
-    dayId: string,
-    exerciseId: string,
-    patch: ExercisePatch,
-  ): Promise<void> {
+  async updateExercise(dayId: string, exerciseId: string, patch: ExercisePatch): Promise<void> {
     await this.persist({
       ...this.programState(),
       days: this.programState().days.map((day) =>
@@ -132,6 +129,7 @@ export class ProgramStore implements OnDestroy {
       restSeconds: 120,
       cue: catalogExercise.instructions,
       imageUrl: catalogExercise.imageUrl,
+      secondaryImageUrl: catalogExercise.secondaryImageUrl,
       videoUrl: catalogExercise.videoUrl,
     };
     await this.persist({
@@ -256,7 +254,8 @@ export class ProgramStore implements OnDestroy {
       }
 
       const normalizedProgram = this.normalizeHydratedProgram(chosenProgram);
-      const programWasMigrated = JSON.stringify(normalizedProgram) !== JSON.stringify(chosenProgram);
+      const programWasMigrated =
+        JSON.stringify(normalizedProgram) !== JSON.stringify(chosenProgram);
       chosenProgram = normalizedProgram;
       if (programWasMigrated && ownerId !== 'local' && navigator.onLine) {
         await this.upsertCloud(ownerId, chosenProgram);

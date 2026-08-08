@@ -6,6 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "catalog:build": "node scripts/build-exercise-catalog.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "check": "pnpm typecheck && pnpm build"
   },

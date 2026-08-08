@@ -4,12 +4,7 @@
       <p class="eyebrow">Cycle actif · {{ store.program().days.length }} jours</p>
       <h1>Programme</h1>
     </div>
-    <button
-      class="edit-toggle"
-      type="button"
-      [class.active]="editing()"
-      (click)="toggleEditing()"
-    >
+    <button class="edit-toggle" type="button" [class.active]="editing()" (click)="toggleEditing()">
       {{ editing() ? 'Terminer' : 'Personnaliser' }}
     </button>
   </header>
@@ -41,8 +36,12 @@
       }
     </div>
     <div class="summary-meta">
-      <span><strong>{{ trainingDayCount() }}</strong> entraînements</span>
-      <span><strong>{{ recoveryDayCount() }}</strong> récupérations</span>
+      <span
+        ><strong>{{ trainingDayCount() }}</strong> entraînements</span
+      >
+      <span
+        ><strong>{{ recoveryDayCount() }}</strong> récupérations</span
+      >
       <span>{{ store.saving() ? 'Enregistrement…' : store.saveLabel() }}</span>
     </div>
     <button class="cycle-reset-button" type="button" (click)="resetCycle()">
@@ -149,7 +148,10 @@
                     </div>
                     <div class="prescription">
                       <strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong>
-                      <small>RIR {{ exercise.targetRir }} · {{ formatRest(exercise.restSeconds) }}</small>
+                      <small
+                        >RIR {{ exercise.targetRir }} ·
+                        {{ formatRest(exercise.restSeconds) }}</small
+                      >
                     </div>
                     @if (editing()) {
                       <div class="exercise-actions">
@@ -158,15 +160,25 @@
                           aria-label="Monter l'exercice"
                           [disabled]="$first"
                           (click)="store.moveExercise(day.id, exercise.id, -1)"
-                        >↑</button>
+                        >
+                          ↑
+                        </button>
                         <button
                           type="button"
                           aria-label="Descendre l'exercice"
                           [disabled]="$last"
                           (click)="store.moveExercise(day.id, exercise.id, 1)"
-                        >↓</button>
-                        <button type="button" (click)="openEditor(day.id, exercise)">Modifier</button>
-                        <button class="danger" type="button" (click)="removeExercise(day.id, exercise)">
+                        >
+                          ↓
+                        </button>
+                        <button type="button" (click)="openEditor(day.id, exercise)">
+                          Modifier
+                        </button>
+                        <button
+                          class="danger"
+                          type="button"
+                          (click)="removeExercise(day.id, exercise)"
+                        >
                           Supprimer
                         </button>
                       </div>
@@ -307,11 +319,11 @@
           />
         </label>
         <label class="edit-field">
-          <span>URL de la vidéo MP4 (optionnel)</span>
+          <span>Lien YouTube ou vidéo MP4 (optionnel)</span>
           <input
             type="url"
             inputmode="url"
-            placeholder="https://…/demonstration.mp4"
+            placeholder="https://youtube.com/watch?v=…"
             [value]="currentDraft.videoUrl"
             (input)="updateDraft('videoUrl', $any($event.target).value)"
           />
@@ -359,13 +371,17 @@
           type="button"
           [class.active]="catalogCategory() === ''"
           (click)="catalogCategory.set('')"
-        >Tous</button>
+        >
+          Tous
+        </button>
         @for (category of catalog.categories(); track category) {
           <button
             type="button"
             [class.active]="catalogCategory() === category"
             (click)="catalogCategory.set(category)"
-          >{{ category }}</button>
+          >
+            {{ category }}
+          </button>
         }
       </div>
 
@@ -374,6 +390,9 @@
       } @else if (catalog.error()) {
         <p class="catalog-state">{{ catalog.error() }}</p>
       } @else {
+        <p class="catalog-summary">
+          {{ filteredCatalog().length }} affichés · {{ catalog.exercises().length }} exercices
+        </p>
         <div class="catalog-list">
           @for (exercise of filteredCatalog(); track exercise.id) {
             <button
@@ -381,7 +400,13 @@
               [disabled]="catalogExerciseAdded(exercise.id)"
               (click)="selectCatalogExercise(exercise)"
             >
-              <span class="catalog-visual">{{ exercise.name.slice(0, 1) }}</span>
+              <span class="catalog-visual">
+                @if (exercise.imageUrl) {
+                  <img [src]="exercise.imageUrl" [alt]="''" loading="lazy" />
+                } @else {
+                  {{ exercise.name.slice(0, 1) }}
+                }
+              </span>
               <span>
                 <strong>{{ exercise.name }}</strong>
                 <small>
@@ -394,6 +419,7 @@
             <p class="catalog-state">Aucun exercice ne correspond à cette recherche.</p>
           }
         </div>
+        <small class="catalog-license">Illustrations libres issues de Free Exercise DB.</small>
       }
     </section>
   </div>

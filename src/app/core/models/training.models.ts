@@ -12,6 +12,7 @@ export interface ExercisePrescription {
   readonly category: string;
   readonly cue?: string;
   readonly imageUrl?: string;
+  readonly secondaryImageUrl?: string;
   readonly videoUrl?: string;
 }
 
@@ -24,7 +25,10 @@ export interface ExerciseCatalogItem {
   readonly aliases: readonly string[];
   readonly instructions?: string;
   readonly imageUrl?: string;
+  readonly secondaryImageUrl?: string;
   readonly videoUrl?: string;
+  readonly sourceUrl?: string;
+  readonly license?: string;
 }
 
 export interface ProgramDay {

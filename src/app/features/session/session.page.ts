@@ -13,6 +13,8 @@ import { ProgramStore } from '../../core/services/program-store';
 import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
+import { ExerciseCatalogService } from '../../core/services/exercise-catalog.service';
+import { ExerciseMediaComponent } from '../../shared/exercise-media/exercise-media.component';
 
 interface EditableSet {
   readonly setNumber: number;
@@ -24,7 +26,7 @@ interface EditableSet {
 
 @Component({
   selector: 'app-session-page',
-  imports: [RouterLink],
+  imports: [RouterLink, ExerciseMediaComponent],
   templateUrl: './session.page.html',
   styleUrl: './session.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +35,7 @@ export class SessionPage implements OnDestroy {
   protected readonly store = inject(ProgramStore);
   protected readonly sync = inject(SyncService);
   protected readonly workout = inject(WorkoutSessionService);
+  protected readonly catalog = inject(ExerciseCatalogService);
   private readonly history = inject(HistoryService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -56,6 +59,9 @@ export class SessionPage implements OnDestroy {
   protected readonly activeExerciseIndex = signal(0);
   protected readonly activeExercise = computed(
     () => this.day().exercises[this.activeExerciseIndex()],
+  );
+  protected readonly activeExerciseWithMedia = computed(() =>
+    this.catalog.enrich(this.activeExercise()),
   );
   protected readonly sets = signal<readonly EditableSet[]>([]);
   protected readonly completedSets = computed(
@@ -84,12 +90,14 @@ export class SessionPage implements OnDestroy {
     const requestedDay = this.trainingDays().find((day) => day.id === requestedDayId);
     const today = this.store.today();
     this.selectedDayId.set(
-      requestedDay?.id ?? (today.kind === 'training' ? today.id : this.trainingDays()[0]?.id ?? ''),
+      requestedDay?.id ??
+        (today.kind === 'training' ? today.id : (this.trainingDays()[0]?.id ?? '')),
     );
     for (const exercise of this.day().exercises) {
       this.setCache.set(exercise.id, this.createSets(exercise));
     }
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
+    void this.catalog.load();
     void this.initializePage();
   }
 

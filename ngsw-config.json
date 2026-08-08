@@ -11,6 +11,8 @@
           "/index.csr.html",
           "/index.html",
           "/manifest.webmanifest",
+          "/data/*.json",
+          "/data/*.txt",
           "/*.css",
           "/*.js"
         ]
@@ -22,6 +24,17 @@
       "updateMode": "prefetch",
       "resources": {
         "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "exercise-images",
+      "urls": ["https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/**"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 240,
+        "maxAge": "30d"
       }
     }
   ]
