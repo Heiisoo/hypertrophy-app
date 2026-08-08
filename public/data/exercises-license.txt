@@ -1,0 +1,4 @@
+Free Exercise DB
+Source: https://github.com/yuhonas/free-exercise-db
+Licence: Unlicense / domaine public
+https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md

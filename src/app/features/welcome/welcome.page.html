@@ -10,9 +10,13 @@
   </section>
 
   <section class="welcome-actions surface-card">
-    <a class="primary-button" routerLink="/connexion" [queryParams]="{ mode: 'signup' }">
-      Créer mon compte
-    </a>
+    <div class="account-actions">
+      <a class="primary-button" routerLink="/connexion" [queryParams]="{ mode: 'signup' }">
+        Créer mon compte
+      </a>
+      <a class="secondary-button" routerLink="/connexion">Se connecter</a>
+    </div>
+    <div class="choice-divider"><span>ou</span></div>
     <button type="button" (click)="useRecommendation()">
       <strong>Découvrir un programme recommandé</strong>
       <span>Une base de 8 jours dont la durée et les exercices sont entièrement modifiables.</span>

@@ -557,6 +557,14 @@
   color: var(--color-champagne);
   background: linear-gradient(145deg, rgb(90 46 36 / 45%), rgb(31 29 30));
   font-weight: 900;
+  overflow: hidden;
+}
+.catalog-visual img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(0.65) contrast(1.04);
 }
 .catalog-list > button > span:nth-child(2) {
   min-width: 0;
@@ -578,6 +586,18 @@
 }
 .catalog-state {
   padding: 22px;
+  text-align: center;
+}
+.catalog-summary,
+.catalog-license {
+  color: var(--color-silver-dark);
+  font-size: 0.57rem;
+}
+.catalog-summary {
+  margin: -1px 2px 1px;
+}
+.catalog-license {
+  padding-top: 2px;
   text-align: center;
 }
 

@@ -1,0 +1,111 @@
+:host,
+.media-shell {
+  display: block;
+  width: 100%;
+}
+.media-shell {
+  position: relative;
+  min-height: 190px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 19px;
+  background: #101011;
+}
+iframe,
+video,
+.image-demo,
+.media-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 0;
+}
+video {
+  object-fit: contain;
+}
+.image-demo {
+  position: relative;
+  background: radial-gradient(circle at 50% 45%, rgb(90 46 36 / 19%), transparent 58%), #101011;
+}
+.image-demo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.image-demo .position-end {
+  opacity: 0;
+}
+.image-demo.animated .position-start {
+  animation: show-start 3.2s ease-in-out infinite;
+}
+.image-demo.animated .position-end {
+  animation: show-end 3.2s ease-in-out infinite;
+}
+.image-demo span {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 6px 9px;
+  border: 1px solid rgb(184 165 138 / 28%);
+  border-radius: 999px;
+  color: var(--color-champagne);
+  background: rgb(14 14 15 / 82%);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.media-placeholder {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--color-muted);
+  text-align: center;
+}
+.media-placeholder svg {
+  width: 106px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+.media-placeholder span {
+  color: var(--color-champagne);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+.media-placeholder small {
+  font-size: 0.62rem;
+}
+@keyframes show-start {
+  0%,
+  42% {
+    opacity: 1;
+  }
+  55%,
+  92% {
+    opacity: 0;
+  }
+}
+@keyframes show-end {
+  0%,
+  42% {
+    opacity: 0;
+  }
+  55%,
+  92% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image-demo.animated .position-start,
+  .image-demo.animated .position-end {
+    animation: none;
+  }
+  .image-demo.animated .position-end {
+    display: none;
+  }
+}

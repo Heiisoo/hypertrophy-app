@@ -1,0 +1,56 @@
+<div class="media-shell">
+  @if (youtubeEmbedUrl(); as embedUrl) {
+    <iframe
+      [src]="embedUrl"
+      [title]="'Démonstration de ' + name()"
+      loading="lazy"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="
+        accelerometer;
+        autoplay;
+        clipboard-write;
+        encrypted-media;
+        gyroscope;
+        picture-in-picture;
+        web-share;
+      "
+      allowfullscreen
+    ></iframe>
+  } @else if (directVideoUrl(); as directUrl) {
+    <video
+      controls
+      playsinline
+      preload="metadata"
+      [poster]="imageUrl() ?? ''"
+      [src]="directUrl"
+    ></video>
+  } @else if (imageUrl()) {
+    <div class="image-demo" [class.animated]="secondaryImageUrl()">
+      <img
+        class="position-start"
+        [src]="imageUrl()"
+        [alt]="'Position de départ pour ' + name()"
+        loading="lazy"
+      />
+      @if (secondaryImageUrl()) {
+        <img
+          class="position-end"
+          [src]="secondaryImageUrl()"
+          [alt]="'Position de fin pour ' + name()"
+          loading="lazy"
+        />
+        <span>Démo · départ / arrivée</span>
+      }
+    </div>
+  } @else {
+    <div class="media-placeholder" aria-label="Illustration de l'exercice">
+      <svg viewBox="0 0 120 72" aria-hidden="true">
+        <path d="M20 36h18m44 0h18M38 27v18m44-18v18M38 36h44" />
+        <circle cx="60" cy="17" r="7" />
+        <path d="M60 24v20m0-12-13 10m13-10 13 10M60 44 49 61m11-17 11 17" />
+      </svg>
+      <span>{{ category() }}</span>
+      <small>Aucune démonstration disponible pour le moment.</small>
+    </div>
+  }
+</div>
