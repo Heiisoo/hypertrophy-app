@@ -30,6 +30,7 @@ interface EditableSet {
   templateUrl: './session.page.html',
   styleUrl: './session.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.rest-timer-visible]': 'timerVisible()' },
 })
 export class SessionPage implements OnDestroy {
   protected readonly store = inject(ProgramStore);
@@ -79,6 +80,7 @@ export class SessionPage implements OnDestroy {
   protected readonly timerLabel = computed(() => this.formatTimer(this.restSeconds()));
   protected readonly previousPerformance = signal('Aucune donnée locale');
   protected readonly finishConfirmationVisible = signal(false);
+  protected readonly abandonConfirmationVisible = signal(false);
   protected readonly sessionStarting = signal(false);
 
   private readonly setCache = new Map<string, readonly EditableSet[]>();
@@ -190,6 +192,21 @@ export class SessionPage implements OnDestroy {
 
   protected cancelFinishSession(): void {
     this.finishConfirmationVisible.set(false);
+  }
+
+  protected requestAbandonSession(): void {
+    if (this.workout.activeSession()) this.abandonConfirmationVisible.set(true);
+  }
+
+  protected cancelAbandonSession(): void {
+    this.abandonConfirmationVisible.set(false);
+  }
+
+  protected async confirmAbandonSession(): Promise<void> {
+    this.abandonConfirmationVisible.set(false);
+    await this.workout.abandon();
+    this.skipTimer();
+    await this.router.navigate(['/accueil']);
   }
 
   protected async confirmFinishSession(): Promise<void> {

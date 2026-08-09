@@ -1,9 +1,10 @@
 import { computed, effect, Injectable, signal } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
-import { SyncQueueItem, WorkoutSession } from '../models/training.models';
+import { SyncQueueItem, WorkoutSession, WorkoutSet } from '../models/training.models';
 import { supabase } from '../supabase/supabase.client';
 import { AuthStore } from './auth-store';
 import { HistoryService } from './history.service';
+import { pendingEntityKeys } from './session-lifecycle';
 
 @Injectable({ providedIn: 'root' })
 export class SyncService {
@@ -43,8 +44,13 @@ export class SyncService {
   }
 
   async notifyQueueChanged(): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await this.refreshPendingCount();
+      if (this.pendingCount() === 0) return;
+      await this.syncNow();
+      if (!this.online() || !this.auth.user() || this.error()) return;
+    }
     await this.refreshPendingCount();
-    await this.syncNow();
   }
 
   async syncNow(): Promise<void> {
@@ -137,9 +143,13 @@ export class SyncService {
   }
 
   private async pullRemote(userId: string): Promise<void> {
-    const [sessionsResult, setsResult] = await Promise.all([
+    const [sessionsResult, setsResult, pendingItems] = await Promise.all([
       supabase.from('workout_sessions').select('*').eq('user_id', userId),
       supabase.from('workout_sets').select('*').eq('user_id', userId),
+      hypertrophyDb.syncQueue
+        .where('[ownerId+status]')
+        .anyOf([userId, 'pending'], [userId, 'failed'])
+        .toArray(),
     ]);
     if (sessionsResult.error) throw sessionsResult.error;
     if (setsResult.error) throw setsResult.error;
@@ -153,6 +163,12 @@ export class SyncService {
         .filter((session): session is WorkoutSession => Boolean(session))
         .map((session) => [session.id, session]),
     );
+    const localSets = new Map(
+      (await hypertrophyDb.workoutSets.bulkGet(setsResult.data.map((set) => set.id)))
+        .filter((set): set is WorkoutSet => Boolean(set))
+        .map((set) => [set.id, set]),
+    );
+    const protectedEntities = pendingEntityKeys(pendingItems);
 
     await hypertrophyDb.transaction(
       'rw',
@@ -162,6 +178,7 @@ export class SyncService {
         await hypertrophyDb.workoutSessions.bulkPut(
           sessionsResult.data.map((session) => {
             const local = localSessions.get(session.id);
+            if (local && protectedEntities.has(`session:${session.id}`)) return local;
             return {
               id: session.id,
               ownerId: userId,
@@ -179,17 +196,21 @@ export class SyncService {
           }),
         );
         await hypertrophyDb.workoutSets.bulkPut(
-          setsResult.data.map((set) => ({
-            id: set.id,
-            ownerId: userId,
-            sessionId: set.session_id,
-            exerciseId: set.exercise_id,
-            setNumber: set.set_number,
-            weightKg: set.weight_kg,
-            reps: set.reps,
-            rir: set.rir,
-            completedAt: set.completed_at ?? undefined,
-          })),
+          setsResult.data.map((set) => {
+            const local = localSets.get(set.id);
+            if (local && protectedEntities.has(`set:${set.id}`)) return local;
+            return {
+              id: set.id,
+              ownerId: userId,
+              sessionId: set.session_id,
+              exerciseId: set.exercise_id,
+              setNumber: set.set_number,
+              weightKg: set.weight_kg,
+              reps: set.reps,
+              rir: set.rir,
+              completedAt: set.completed_at ?? undefined,
+            };
+          }),
         );
       },
     );

@@ -4,6 +4,7 @@ import { WorkoutSession } from '../models/training.models';
 import { HistoryService } from './history.service';
 import { SyncService } from './sync.service';
 import { AuthStore } from './auth-store';
+import { abandonSession, completeSession, resolveActiveSessions } from './session-lifecycle';
 
 @Injectable({ providedIn: 'root' })
 export class WorkoutSessionService implements OnDestroy {
@@ -21,6 +22,7 @@ export class WorkoutSessionService implements OnDestroy {
   private hydration: Promise<void> = Promise.resolve();
   private readonly timerId: ReturnType<typeof setInterval>;
   private hydratedOwnerId = '';
+  private startPromise?: Promise<WorkoutSession>;
 
   constructor(
     private readonly sync: SyncService,
@@ -45,14 +47,33 @@ export class WorkoutSessionService implements OnDestroy {
   }
 
   async start(programDayId: string): Promise<WorkoutSession> {
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = this.createOrReuseSession(programDayId).finally(() => {
+      this.startPromise = undefined;
+    });
+    return this.startPromise;
+  }
+
+  private async createOrReuseSession(programDayId: string): Promise<WorkoutSession> {
     await this.hydration;
     const current = this.activeSession();
     if (current) return current;
 
+    const ownerId = this.auth.user()?.id ?? 'local';
+    const stored = await hypertrophyDb.workoutSessions
+      .where('[ownerId+status]')
+      .equals([ownerId, 'active'])
+      .sortBy('startedAt');
+    const existing = stored.at(-1);
+    if (existing) {
+      this.activeSession.set(existing);
+      return existing;
+    }
+
     const now = new Date().toISOString();
     const session: WorkoutSession = {
       id: `session-${crypto.randomUUID()}`,
-      ownerId: this.auth.user()?.id ?? 'local',
+      ownerId,
       programDayId,
       startedAt: now,
       status: 'active',
@@ -92,19 +113,27 @@ export class WorkoutSessionService implements OnDestroy {
 
     const finishedAt = new Date().toISOString();
     const durationSeconds = this.calculateElapsedSeconds(session, new Date(finishedAt).getTime());
-    const completed: WorkoutSession = {
-      ...session,
-      finishedAt,
-      pausedAt: undefined,
-      durationSeconds,
-      status: 'completed',
-    };
+    const completed = completeSession(session, finishedAt, durationSeconds);
 
     await this.persistSession(completed);
     this.activeSession.set(null);
     await this.sync.notifyQueueChanged();
     await this.history.refresh();
     return completed;
+  }
+
+  async abandon(): Promise<WorkoutSession | null> {
+    const session = this.activeSession();
+    if (!session) return null;
+
+    const finishedAt = new Date().toISOString();
+    const durationSeconds = this.calculateElapsedSeconds(session, new Date(finishedAt).getTime());
+    const abandoned = abandonSession(session, finishedAt, durationSeconds);
+    await this.persistSession(abandoned);
+    this.activeSession.set(null);
+    await this.sync.notifyQueueChanged();
+    await this.history.refresh();
+    return abandoned;
   }
 
   formatDuration(totalSeconds: number): string {
@@ -128,8 +157,19 @@ export class WorkoutSessionService implements OnDestroy {
       .where('[ownerId+status]')
       .equals([ownerId, 'active'])
       .toArray();
-    sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-    this.activeSession.set(sessions[0] ?? null);
+    const resolution = resolveActiveSessions(sessions);
+    if (resolution.stale.length > 0) {
+      const finishedAt = new Date().toISOString();
+      await Promise.all(
+        resolution.stale.map((session) =>
+          this.persistSession(
+            abandonSession(session, finishedAt, this.calculateElapsedSeconds(session)),
+          ),
+        ),
+      );
+      await this.sync.notifyQueueChanged();
+    }
+    this.activeSession.set(resolution.current);
     this.ready.set(true);
     this.clock.set(Date.now());
   }

@@ -1,4 +1,9 @@
 <div class="app-frame" [class.has-active-session]="workout.activeSession()">
+  <aside class="portrait-lock" role="status">
+    <img src="/icons/icon-192x192.png" alt="" />
+    <strong>Remets ton iPhone à la verticale</strong>
+    <span>L’entraînement est conçu pour le mode portrait.</span>
+  </aside>
   <main class="app-content">
     <router-outlet />
   </main>

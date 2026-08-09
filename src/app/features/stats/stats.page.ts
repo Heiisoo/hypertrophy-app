@@ -1,9 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { hypertrophyDb } from '../../core/database/hypertrophy.database';
 import { WorkoutSession, WorkoutSet } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
 import { AuthStore } from '../../core/services/auth-store';
+import { setsFromCompletedSessions } from '../../core/services/session-lifecycle';
 
 @Component({
   selector: 'app-stats-page',
@@ -81,6 +89,6 @@ export class StatsPage {
       (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
     );
     this.sessions.set(sessions);
-    this.sets.set(sets);
+    this.sets.set(setsFromCompletedSessions(sessions, sets));
   }
 }
