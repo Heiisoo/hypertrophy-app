@@ -12,6 +12,9 @@
     radial-gradient(circle at 90% -10%, rgb(122 52 40 / 16%), transparent 32rem), var(--color-bg);
   box-shadow: 0 0 80px rgb(0 0 0 / 35%);
 }
+.portrait-lock {
+  display: none;
+}
 
 .app-content {
   min-height: 100dvh;
@@ -151,5 +154,33 @@
   }
   .bottom-nav {
     bottom: 28px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .portrait-lock {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    padding: 28px;
+    color: var(--color-silver);
+    background: radial-gradient(circle at 50% 30%, rgb(122 52 40 / 30%), transparent 45%), #0e0e0f;
+    text-align: center;
+  }
+  .portrait-lock img {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px;
+  }
+  .portrait-lock strong {
+    font-size: 1.05rem;
+  }
+  .portrait-lock span {
+    color: var(--color-muted);
+    font-size: 0.72rem;
   }
 }

@@ -14,7 +14,10 @@
       <strong>{{ workout.activeSession() ? workout.elapsedLabel() : '00:00:00' }}</strong>
     </div>
     @if (workout.activeSession()) {
-      <button type="button" (click)="finishSession()">Terminer</button>
+      <div class="session-header-actions">
+        <button class="abandon" type="button" (click)="requestAbandonSession()">Annuler</button>
+        <button type="button" (click)="finishSession()">Terminer</button>
+      </div>
     } @else {
       <span class="header-spacer" aria-hidden="true"></span>
     }
@@ -278,6 +281,28 @@
       </div>
     </div>
   </aside>
+}
+
+@if (abandonConfirmationVisible()) {
+  <div class="finish-backdrop" role="presentation" (click)="cancelAbandonSession()">
+    <section
+      class="finish-dialog surface-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="abandon-title"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="eyebrow">Annuler la séance</span>
+      <h2 id="abandon-title">Ignorer complètement cette séance ?</h2>
+      <p>Elle ne comptera ni dans tes statistiques, ni dans tes performances précédentes.</p>
+      <div>
+        <button type="button" (click)="cancelAbandonSession()">Garder la séance</button>
+        <button class="confirm" type="button" (click)="confirmAbandonSession()">
+          Annuler définitivement
+        </button>
+      </div>
+    </section>
+  </div>
 }
 
 @if (finishConfirmationVisible()) {
