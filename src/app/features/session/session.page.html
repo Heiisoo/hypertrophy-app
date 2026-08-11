@@ -151,8 +151,8 @@
               <div class="stepper">
                 <button
                   type="button"
-                  (click)="adjust(index, 'weightKg', -2.5)"
-                  aria-label="Retirer 2,5 kg"
+                  (click)="adjust(index, 'weightKg', -1)"
+                  aria-label="Retirer 1 kg"
                 >
                   −
                 </button>
@@ -160,7 +160,7 @@
                   type="number"
                   inputmode="decimal"
                   min="0"
-                  step="2.5"
+                  step="1"
                   [value]="set.weightKg"
                   [disabled]="set.completed"
                   (change)="setValue(index, 'weightKg', $any($event.target).value)"
@@ -168,8 +168,8 @@
                 /><small>kg</small>
                 <button
                   type="button"
-                  (click)="adjust(index, 'weightKg', 2.5)"
-                  aria-label="Ajouter 2,5 kg"
+                  (click)="adjust(index, 'weightKg', 1)"
+                  aria-label="Ajouter 1 kg"
                 >
                   +
                 </button>

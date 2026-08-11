@@ -15,6 +15,10 @@ import { HistoryService } from '../../core/services/history.service';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
 import { ExerciseCatalogService } from '../../core/services/exercise-catalog.service';
 import { ExerciseMediaComponent } from '../../shared/exercise-media/exercise-media.component';
+import {
+  adjustTimerDeadline,
+  remainingTimerSeconds,
+} from '../../core/services/timer-clock';
 
 interface EditableSet {
   readonly setNumber: number;
@@ -86,6 +90,10 @@ export class SessionPage implements OnDestroy {
   private readonly setCache = new Map<string, readonly EditableSet[]>();
   private readonly previousLabels = new Map<string, string>();
   private timerId?: ReturnType<typeof setInterval>;
+  private restEndsAt?: number;
+  private readonly refreshRestTimerWhenVisible = (): void => {
+    if (document.visibilityState === 'visible') this.refreshRestTimer();
+  };
 
   constructor() {
     const requestedDayId = this.route.snapshot.queryParamMap.get('day');
@@ -101,10 +109,16 @@ export class SessionPage implements OnDestroy {
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
     void this.catalog.load();
     void this.initializePage();
+    document.addEventListener('visibilitychange', this.refreshRestTimerWhenVisible);
+    window.addEventListener('focus', this.refreshRestTimer);
+    window.addEventListener('pageshow', this.refreshRestTimer);
   }
 
   ngOnDestroy(): void {
     this.clearTimer();
+    document.removeEventListener('visibilitychange', this.refreshRestTimerWhenVisible);
+    window.removeEventListener('focus', this.refreshRestTimer);
+    window.removeEventListener('pageshow', this.refreshRestTimer);
   }
 
   protected selectExercise(index: number): void {
@@ -280,11 +294,14 @@ export class SessionPage implements OnDestroy {
   }
 
   protected adjustTimer(amount: number): void {
-    this.restSeconds.update((seconds) => Math.max(1, seconds + amount));
+    if (this.restEndsAt === undefined) return;
+    this.restEndsAt = adjustTimerDeadline(this.restEndsAt, amount);
+    this.refreshRestTimer();
   }
 
   protected skipTimer(): void {
     this.clearTimer();
+    this.restEndsAt = undefined;
     this.restSeconds.set(0);
   }
 
@@ -353,16 +370,18 @@ export class SessionPage implements OnDestroy {
 
   private startRest(seconds: number): void {
     this.clearTimer();
-    this.restSeconds.set(seconds);
-    this.timerId = setInterval(() => {
-      this.restSeconds.update((remaining) => {
-        if (remaining <= 1) {
-          this.clearTimer();
-          return 0;
-        }
-        return remaining - 1;
-      });
-    }, 1000);
+    this.restEndsAt = Date.now() + seconds * 1000;
+    this.refreshRestTimer();
+    this.timerId = setInterval(this.refreshRestTimer, 1000);
+  }
+
+  private readonly refreshRestTimer = (): void => {
+    const remaining = remainingTimerSeconds(this.restEndsAt);
+    this.restSeconds.set(remaining);
+    if (remaining === 0) {
+      this.clearTimer();
+      this.restEndsAt = undefined;
+    }
   }
 
   private clearTimer(): void {
