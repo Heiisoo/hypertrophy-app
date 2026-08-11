@@ -24,6 +24,9 @@ interface EditableSet {
   readonly reps: number;
   readonly rir: number;
   readonly completed: boolean;
+  readonly durationMinutes: number;
+  readonly speedKmh: number;
+  readonly inclinePercent: number;
 }
 
 @Component({
@@ -44,9 +47,7 @@ export class SessionPage implements OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly trainingDays = computed(() =>
-    this.store.program().days.filter((day) => day.kind === 'training'),
-  );
+  protected readonly sessionDays = computed(() => this.store.program().days);
   protected readonly selectedDayId = signal('');
 
   protected readonly day = computed(() => {
@@ -56,9 +57,9 @@ export class SessionPage implements OnDestroy {
       ? this.store.program().days.find((day) => day.id === activeDayId)
       : undefined;
     if (activeDay) return activeDay;
-    const selectedDay = this.trainingDays().find((day) => day.id === this.selectedDayId());
+    const selectedDay = this.sessionDays().find((day) => day.id === this.selectedDayId());
     if (selectedDay) return selectedDay;
-    return today.kind === 'training' ? today : (this.trainingDays()[0] ?? today);
+    return today ?? this.sessionDays()[0];
   });
   protected readonly activeExerciseIndex = signal(0);
   protected readonly activeExercise = computed(
@@ -100,12 +101,9 @@ export class SessionPage implements OnDestroy {
 
   constructor() {
     const requestedDayId = this.route.snapshot.queryParamMap.get('day');
-    const requestedDay = this.trainingDays().find((day) => day.id === requestedDayId);
+    const requestedDay = this.sessionDays().find((day) => day.id === requestedDayId);
     const today = this.store.today();
-    this.selectedDayId.set(
-      requestedDay?.id ??
-        (today.kind === 'training' ? today.id : (this.trainingDays()[0]?.id ?? '')),
-    );
+    this.selectedDayId.set(requestedDay?.id ?? today.id ?? this.sessionDays()[0]?.id ?? '');
     for (const exercise of this.day().exercises) {
       this.setCache.set(exercise.id, this.createSets(exercise));
     }
@@ -136,7 +134,7 @@ export class SessionPage implements OnDestroy {
 
   protected async selectDay(dayId: string): Promise<void> {
     if (this.workout.activeSession() || dayId === this.day().id) return;
-    const selectedDay = this.trainingDays().find((day) => day.id === dayId);
+    const selectedDay = this.sessionDays().find((day) => day.id === dayId);
     if (!selectedDay) return;
 
     this.selectedDayId.set(dayId);
@@ -193,6 +191,32 @@ export class SessionPage implements OnDestroy {
     );
   }
 
+  protected adjustRecovery(
+    field: 'durationMinutes' | 'speedKmh' | 'inclinePercent',
+    amount: number,
+  ): void {
+    this.updateSets((sets) =>
+      sets.map((set, index) =>
+        index === 0 && !set.completed
+          ? { ...set, [field]: Math.max(0, Math.round((set[field] + amount) * 10) / 10) }
+          : set,
+      ),
+    );
+  }
+
+  protected setRecoveryValue(
+    field: 'durationMinutes' | 'speedKmh' | 'inclinePercent',
+    rawValue: string,
+  ): void {
+    const value = Number.parseFloat(rawValue.replace(',', '.'));
+    if (!Number.isFinite(value)) return;
+    this.updateSets((sets) =>
+      sets.map((set, index) =>
+        index === 0 && !set.completed ? { ...set, [field]: Math.max(0, value) } : set,
+      ),
+    );
+  }
+
   protected toggleSet(setIndex: number): void {
     const exercise = this.activeExercise();
     if (!exercise) return;
@@ -209,7 +233,9 @@ export class SessionPage implements OnDestroy {
     this.completedTotal.set(
       [...this.setCache.values()].flat().filter((set) => set.completed).length,
     );
-    if (updatedSet?.completed) this.startRest(exercise.restSeconds);
+    if (updatedSet?.completed && (exercise.trackingMode ?? 'strength') === 'strength') {
+      this.startRest(exercise.restSeconds);
+    }
     if (updatedSet) void this.persistSet(exercise, updatedSet);
   }
 
@@ -322,6 +348,9 @@ export class SessionPage implements OnDestroy {
                 weightKg: saved.weightKg,
                 reps: saved.reps,
                 rir: saved.rir,
+                durationMinutes: saved.durationMinutes ?? fallback.durationMinutes,
+                speedKmh: saved.speedKmh ?? fallback.speedKmh,
+                inclinePercent: saved.inclinePercent ?? fallback.inclinePercent,
                 completed: Boolean(saved.completedAt),
               }
             : fallback;
@@ -362,15 +391,19 @@ export class SessionPage implements OnDestroy {
 
   private createSets(exercise: ExercisePrescription | undefined): readonly EditableSet[] {
     if (!exercise) return [];
+    const isStrength = (exercise.trackingMode ?? 'strength') === 'strength';
     const targetReps = Number.parseInt(exercise.repRange, 10) || 8;
     const targetRir = Number.parseInt(exercise.targetRir, 10) || 0;
     const defaultWeight = exercise.category === 'Épaules' ? 20 : 32;
     return Array.from({ length: exercise.sets }, (_, index) => ({
       setNumber: index + 1,
-      weightKg: defaultWeight,
-      reps: targetReps,
-      rir: targetRir,
+      weightKg: isStrength ? defaultWeight : 0,
+      reps: isStrength ? targetReps : 0,
+      rir: isStrength ? targetRir : 0,
       completed: false,
+      durationMinutes: exercise.targetDurationMinutes ?? 0,
+      speedKmh: exercise.targetSpeedKmh ?? 0,
+      inclinePercent: exercise.targetInclinePercent ?? 0,
     }));
   }
 
@@ -389,13 +422,21 @@ export class SessionPage implements OnDestroy {
               weightKg: source.weightKg,
               reps: source.reps,
               rir: source.rir,
+              durationMinutes: source.durationMinutes ?? exercise.targetDurationMinutes ?? 0,
+              speedKmh: source.speedKmh ?? exercise.targetSpeedKmh ?? 0,
+              inclinePercent: source.inclinePercent ?? exercise.targetInclinePercent ?? 0,
               completed: false,
             };
           }),
         );
+        const latest = previous[0];
         this.previousLabels.set(
           exercise.id,
-          `${previous[0].weightKg} kg · ${previous.map((set) => set.reps).join(' / ')}`,
+          exercise.trackingMode === 'cardio'
+            ? `${latest.durationMinutes ?? 0} min · ${latest.speedKmh ?? 0} km/h · ${latest.inclinePercent ?? 0} %`
+            : exercise.trackingMode === 'duration'
+              ? `${latest.durationMinutes ?? 0} min`
+              : `${latest.weightKg} kg · ${previous.map((set) => set.reps).join(' / ')}`,
         );
       }),
     );
@@ -461,6 +502,9 @@ export class SessionPage implements OnDestroy {
           weightKg: set.weightKg,
           reps: set.reps,
           rir: set.rir,
+          durationMinutes: set.durationMinutes,
+          speedKmh: set.speedKmh,
+          inclinePercent: set.inclinePercent,
           completedAt: set.completed ? now : undefined,
         });
         await this.replaceQueueItem(session.ownerId, 'set', setId, now);

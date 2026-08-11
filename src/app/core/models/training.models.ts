@@ -1,6 +1,7 @@
 export type TrainingDayKind = 'training' | 'recovery';
 export type SessionStatus = 'active' | 'completed' | 'abandoned';
 export type SyncStatus = 'pending' | 'synced' | 'failed';
+export type ExerciseTrackingMode = 'strength' | 'cardio' | 'duration' | 'checklist';
 
 export interface ExercisePrescription {
   readonly id: string;
@@ -14,6 +15,10 @@ export interface ExercisePrescription {
   readonly imageUrl?: string;
   readonly secondaryImageUrl?: string;
   readonly videoUrl?: string;
+  readonly trackingMode?: ExerciseTrackingMode;
+  readonly targetDurationMinutes?: number;
+  readonly targetSpeedKmh?: number;
+  readonly targetInclinePercent?: number;
 }
 
 export interface ExerciseCatalogItem {
@@ -80,6 +85,9 @@ export interface WorkoutSet {
   readonly weightKg: number;
   readonly reps: number;
   readonly rir: number;
+  readonly durationMinutes?: number;
+  readonly speedKmh?: number;
+  readonly inclinePercent?: number;
   readonly completedAt?: string;
 }
 

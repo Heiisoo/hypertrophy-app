@@ -142,6 +142,9 @@ export class SyncService {
       weight_kg: set.weightKg,
       reps: set.reps,
       rir: set.rir,
+      duration_minutes: set.durationMinutes ?? null,
+      speed_kmh: set.speedKmh ?? null,
+      incline_percent: set.inclinePercent ?? null,
       completed_at: set.completedAt ?? null,
     });
     if (error) throw error;
@@ -234,6 +237,9 @@ export class SyncService {
               weightKg: set.weight_kg,
               reps: set.reps,
               rir: set.rir,
+              durationMinutes: set.duration_minutes ?? undefined,
+              speedKmh: set.speed_kmh ?? undefined,
+              inclinePercent: set.incline_percent ?? undefined,
               completedAt: set.completed_at ?? undefined,
             };
           }),

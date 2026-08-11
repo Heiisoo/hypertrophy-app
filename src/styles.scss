@@ -119,6 +119,117 @@ h3 {
   filter: brightness(0.94);
 }
 
+app-session-page .recovery-tracking {
+  display: grid;
+  gap: 13px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgb(184 165 138 / 15%);
+  border-radius: 15px;
+  background: rgb(184 165 138 / 4%);
+}
+app-session-page .day-picker-list button.recovery {
+  border-color: rgb(184 165 138 / 18%);
+}
+app-session-page .day-picker-list button.recovery.active {
+  border-color: rgb(184 165 138 / 48%);
+  background: linear-gradient(145deg, rgb(184 165 138 / 15%), rgb(26 25 26));
+}
+app-session-page .recovery-tracking.completed {
+  opacity: 0.68;
+  border-color: rgb(103 185 140 / 30%);
+  background: rgb(103 185 140 / 6%);
+}
+app-session-page .recovery-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+app-session-page .recovery-metric-grid.duration-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+app-session-page .recovery-metric-grid label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 0.57rem;
+  font-weight: 700;
+}
+app-session-page .recovery-stepper {
+  min-width: 0;
+  height: 40px;
+  display: grid;
+  grid-template-columns: 22px minmax(28px, 1fr) auto 22px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 11px;
+  background: rgb(0 0 0 / 16%);
+}
+app-session-page .recovery-stepper button {
+  height: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--color-champagne);
+  background: transparent;
+}
+app-session-page .recovery-stepper input {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--color-text);
+  background: transparent;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  appearance: textfield;
+}
+app-session-page .recovery-stepper input::-webkit-inner-spin-button,
+app-session-page .recovery-stepper input::-webkit-outer-spin-button {
+  appearance: none;
+}
+app-session-page .recovery-stepper small {
+  color: var(--color-muted);
+  font-size: 0.48rem;
+  white-space: nowrap;
+}
+app-session-page .recovery-check {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgb(184 165 138 / 24%);
+  border-radius: 12px;
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 7%);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+app-session-page .recovery-check i {
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(184 165 138 / 35%);
+  border-radius: 6px;
+  color: #10241a;
+  background: transparent;
+  font-style: normal;
+}
+app-session-page .completed .recovery-check i {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+@media (max-width: 405px) {
+  app-session-page .recovery-metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

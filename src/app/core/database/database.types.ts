@@ -303,39 +303,48 @@ export type Database = {
           created_at: string;
           exercise_id: string;
           id: string;
+          incline_percent: number | null;
           reps: number;
           rir: number;
+          speed_kmh: number | null;
           session_id: string;
           set_number: number;
           updated_at: string;
           user_id: string;
           weight_kg: number;
+          duration_minutes: number | null;
         };
         Insert: {
           completed_at?: string | null;
           created_at?: string;
           exercise_id: string;
           id: string;
+          incline_percent?: number | null;
           reps: number;
           rir: number;
+          speed_kmh?: number | null;
           session_id: string;
           set_number: number;
           updated_at?: string;
           user_id: string;
           weight_kg: number;
+          duration_minutes?: number | null;
         };
         Update: {
           completed_at?: string | null;
           created_at?: string;
           exercise_id?: string;
           id?: string;
+          incline_percent?: number | null;
           reps?: number;
           rir?: number;
+          speed_kmh?: number | null;
           session_id?: string;
           set_number?: number;
           updated_at?: string;
           user_id?: string;
           weight_kg?: number;
+          duration_minutes?: number | null;
         };
         Relationships: [
           {

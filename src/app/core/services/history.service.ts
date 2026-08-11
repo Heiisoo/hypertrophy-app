@@ -36,12 +36,14 @@ export class HistoryService {
     this.completedSessionCount.set(sessions.length);
     const completedSets = setsFromCompletedSessions(sessions, sets);
     this.bestSet.set(
-      completedSets.reduce<WorkoutSet | null>((best, current) => {
-        if (!best) return current;
-        const currentScore = current.weightKg * (1 + current.reps / 30);
-        const bestScore = best.weightKg * (1 + best.reps / 30);
-        return currentScore > bestScore ? current : best;
-      }, null),
+      completedSets
+        .filter((set) => set.weightKg > 0 && set.reps > 0)
+        .reduce<WorkoutSet | null>((best, current) => {
+          if (!best) return current;
+          const currentScore = current.weightKg * (1 + current.reps / 30);
+          const bestScore = best.weightKg * (1 + best.reps / 30);
+          return currentScore > bestScore ? current : best;
+        }, null),
     );
   }
 
