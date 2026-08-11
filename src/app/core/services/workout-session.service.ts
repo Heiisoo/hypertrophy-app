@@ -5,6 +5,7 @@ import { HistoryService } from './history.service';
 import { SyncService } from './sync.service';
 import { AuthStore } from './auth-store';
 import { abandonSession, completeSession, resolveActiveSessions } from './session-lifecycle';
+import { calculateWorkoutElapsedSeconds } from './timer-clock';
 
 @Injectable({ providedIn: 'root' })
 export class WorkoutSessionService implements OnDestroy {
@@ -14,7 +15,7 @@ export class WorkoutSessionService implements OnDestroy {
   readonly elapsedSeconds = computed(() => {
     this.clock();
     const session = this.activeSession();
-    return session ? this.calculateElapsedSeconds(session) : 0;
+    return session ? calculateWorkoutElapsedSeconds(session) : 0;
   });
   readonly elapsedLabel = computed(() => this.formatDuration(this.elapsedSeconds()));
 
@@ -23,6 +24,10 @@ export class WorkoutSessionService implements OnDestroy {
   private readonly timerId: ReturnType<typeof setInterval>;
   private hydratedOwnerId = '';
   private startPromise?: Promise<WorkoutSession>;
+  private readonly refreshClock = (): void => this.clock.set(Date.now());
+  private readonly refreshClockWhenVisible = (): void => {
+    if (document.visibilityState === 'visible') this.refreshClock();
+  };
 
   constructor(
     private readonly sync: SyncService,
@@ -35,11 +40,17 @@ export class WorkoutSessionService implements OnDestroy {
       this.hydratedOwnerId = ownerId;
       this.hydration = this.hydrateActiveSession(ownerId);
     });
-    this.timerId = setInterval(() => this.clock.set(Date.now()), 1000);
+    this.timerId = setInterval(this.refreshClock, 1000);
+    document.addEventListener('visibilitychange', this.refreshClockWhenVisible);
+    window.addEventListener('focus', this.refreshClock);
+    window.addEventListener('pageshow', this.refreshClock);
   }
 
   ngOnDestroy(): void {
     clearInterval(this.timerId);
+    document.removeEventListener('visibilitychange', this.refreshClockWhenVisible);
+    window.removeEventListener('focus', this.refreshClock);
+    window.removeEventListener('pageshow', this.refreshClock);
   }
 
   async whenReady(): Promise<void> {
@@ -112,7 +123,10 @@ export class WorkoutSessionService implements OnDestroy {
     if (!session) return null;
 
     const finishedAt = new Date().toISOString();
-    const durationSeconds = this.calculateElapsedSeconds(session, new Date(finishedAt).getTime());
+    const durationSeconds = calculateWorkoutElapsedSeconds(
+      session,
+      new Date(finishedAt).getTime(),
+    );
     const completed = completeSession(session, finishedAt, durationSeconds);
 
     await this.persistSession(completed);
@@ -127,7 +141,10 @@ export class WorkoutSessionService implements OnDestroy {
     if (!session) return null;
 
     const finishedAt = new Date().toISOString();
-    const durationSeconds = this.calculateElapsedSeconds(session, new Date(finishedAt).getTime());
+    const durationSeconds = calculateWorkoutElapsedSeconds(
+      session,
+      new Date(finishedAt).getTime(),
+    );
     const abandoned = abandonSession(session, finishedAt, durationSeconds);
     await this.persistSession(abandoned);
     this.activeSession.set(null);
@@ -163,7 +180,7 @@ export class WorkoutSessionService implements OnDestroy {
       await Promise.all(
         resolution.stale.map((session) =>
           this.persistSession(
-            abandonSession(session, finishedAt, this.calculateElapsedSeconds(session)),
+            abandonSession(session, finishedAt, calculateWorkoutElapsedSeconds(session)),
           ),
         ),
       );
@@ -172,16 +189,6 @@ export class WorkoutSessionService implements OnDestroy {
     this.activeSession.set(resolution.current);
     this.ready.set(true);
     this.clock.set(Date.now());
-  }
-
-  private calculateElapsedSeconds(session: WorkoutSession, now = Date.now()): number {
-    if (session.durationSeconds !== undefined) return session.durationSeconds;
-    const effectiveEnd = session.pausedAt ? new Date(session.pausedAt).getTime() : now;
-    const grossSeconds = Math.max(
-      0,
-      Math.floor((effectiveEnd - new Date(session.startedAt).getTime()) / 1000),
-    );
-    return Math.max(0, grossSeconds - (session.accumulatedPausedSeconds ?? 0));
   }
 
   private async persistSession(session: WorkoutSession): Promise<void> {
