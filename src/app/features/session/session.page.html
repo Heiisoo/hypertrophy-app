@@ -131,6 +131,43 @@
           />
         </div>
 
+        <section class="exercise-note" [class.expanded]="noteExpanded()">
+          <button
+            class="exercise-note-trigger"
+            type="button"
+            (click)="toggleNote()"
+            [attr.aria-expanded]="noteExpanded()"
+          >
+            <span>
+              <strong>Ma note pour cet exercice</strong>
+              <small>
+                @if (exerciseNote()) {
+                  {{ exerciseNote() }}
+                } @else {
+                  Banc, réglage, prise, sensation…
+                }
+              </small>
+            </span>
+            <i>{{ noteExpanded() ? '−' : '+' }}</i>
+          </button>
+          @if (noteExpanded()) {
+            <label>
+              <textarea
+                rows="3"
+                maxlength="2000"
+                [attr.aria-label]="'Note personnelle pour ' + exercise.name"
+                placeholder="Ex. banc à 30°, cran 4, prise neutre…"
+                [value]="exerciseNote()"
+                (input)="updateExerciseNote($any($event.target).value)"
+              ></textarea>
+            </label>
+            <div class="exercise-note-footer">
+              <small>Visible uniquement sur ton compte</small>
+              <span>{{ noteStatus() }}</span>
+            </div>
+          }
+        </section>
+
         <div class="previous-performance">
           <span>Dernière performance</span>
           <strong>{{ previousPerformance() }}</strong>

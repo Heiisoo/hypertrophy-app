@@ -1,5 +1,15 @@
 <div class="media-shell">
-  @if (youtubeEmbedUrl(); as embedUrl) {
+  @if (hasVideo() && !showVideo()) {
+    <button class="video-preview" type="button" (click)="playVideo()">
+      @if (imageUrl()) {
+        <img [src]="imageUrl()" [alt]="'Démonstration de ' + name()" loading="lazy" />
+      } @else {
+        <span class="preview-placeholder">{{ category() }}</span>
+      }
+      <i aria-hidden="true">▶</i>
+      <strong>Voir le mouvement</strong>
+    </button>
+  } @else if (showVideo() && youtubeEmbedUrl(); as embedUrl) {
     <iframe
       [src]="embedUrl"
       [title]="'Démonstration de ' + name()"
@@ -16,13 +26,17 @@
       "
       allowfullscreen
     ></iframe>
-  } @else if (directVideoUrl(); as directUrl) {
+  } @else if (showVideo() && directVideoUrl(); as directUrl) {
     <video
       controls
       playsinline
+      autoplay
+      muted
+      loop
       preload="metadata"
       [poster]="imageUrl() ?? ''"
       [src]="directUrl"
+      (error)="videoFailed()"
     ></video>
   } @else if (imageUrl()) {
     <div class="image-demo" [class.animated]="secondaryImageUrl()">

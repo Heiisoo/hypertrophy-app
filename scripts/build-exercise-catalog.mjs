@@ -1,14 +1,18 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 
-const SOURCE_URL =
+const FREE_EXERCISE_DB_URL =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
-const IMAGE_ROOT = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const FREE_EXERCISE_IMAGE_ROOT =
+  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const WGER_EXERCISE_URL = 'https://wger.de/api/v2/exerciseinfo/?limit=1000';
 
 const muscleNames = {
   abdominals: 'Abdominaux',
+  abs: 'Abdominaux',
   abductors: 'Abducteurs',
   adductors: 'Adducteurs',
   biceps: 'Biceps',
+  brachialis: 'Biceps',
   calves: 'Mollets',
   chest: 'Pectoraux',
   forearms: 'Avant-bras',
@@ -18,24 +22,42 @@ const muscleNames = {
   'lower back': 'Lombaires',
   'middle back': 'Dos',
   neck: 'Cou',
+  obliques: 'Abdominaux',
   quadriceps: 'Quadriceps',
+  quads: 'Quadriceps',
   shoulders: 'Épaules',
   traps: 'Trapèzes',
   triceps: 'Triceps',
 };
 
+const categoryNames = {
+  abs: 'Abdominaux',
+  arms: 'Bras',
+  back: 'Dos',
+  calves: 'Mollets',
+  cardio: 'Cardio',
+  chest: 'Pectoraux',
+  legs: 'Jambes',
+  shoulders: 'Épaules',
+};
+
 const equipmentNames = {
   bands: 'Élastiques',
   barbell: 'Barre',
+  'body only': 'Poids du corps',
   body_only: 'Poids du corps',
   cable: 'Poulie',
   dumbbell: 'Haltères',
   'e-z curl bar': 'Barre EZ',
+  'exercise ball': 'Swiss ball',
   exercise_ball: 'Swiss ball',
+  'foam roll': 'Rouleau de massage',
   foam_roll: 'Rouleau de massage',
   kettlebells: 'Kettlebells',
   machine: 'Machine',
+  'medicine ball': 'Médecine-ball',
   medicine_ball: 'Médecine-ball',
+  'none (bodyweight exercise)': 'Poids du corps',
   other: 'Autre',
 };
 
@@ -127,47 +149,218 @@ const frenchNames = {
   Zottman_Preacher_Curl: 'Curl Zottman au pupitre',
 };
 
+const normalize = (value) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\b(the|a|an|with|using)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(
+      /\b(squats|curls|extensions|raises|presses|flyes|flies|rows|lunges|crunches|pullups|pushups)\b/g,
+      (word) =>
+        ({
+          squats: 'squat',
+          curls: 'curl',
+          extensions: 'extension',
+          raises: 'raise',
+          presses: 'press',
+          flyes: 'fly',
+          flies: 'fly',
+          rows: 'row',
+          lunges: 'lunge',
+          crunches: 'crunch',
+          pullups: 'pullup',
+          pushups: 'pushup',
+        })[word],
+    )
+    .trim();
+
 const normalizedId = (id) => id.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+const distinct = (values) => [...new Set(values.filter(Boolean))];
+const translateEquipment = (value) => equipmentNames[value?.toLowerCase()] ?? value ?? undefined;
+const translateMuscle = (value) => {
+  const normalized = value?.toLowerCase();
+  return muscleNames[normalized] ?? value ?? undefined;
+};
 
-const response = await fetch(SOURCE_URL);
-if (!response.ok) throw new Error(`Exercise catalog download failed (${response.status})`);
-const sourceExercises = await response.json();
+const catalog = new Map();
+const aliasIndex = new Map();
 
-const catalog = sourceExercises
-  .filter((exercise) => exercise.category === 'strength')
-  .map((exercise) => {
-    const translatedMuscles = exercise.primaryMuscles.map(
-      (muscle) => muscleNames[muscle] ?? muscle,
-    );
-    const translatedName = frenchNames[normalizedId(exercise.id)] ?? exercise.name;
-    const imageUrls = exercise.images.map((path) => `${IMAGE_ROOT}${path}`);
-    return {
-      id: `free:${exercise.id}`,
-      name: translatedName,
-      category: translatedMuscles[0] ?? 'À classer',
-      equipment: equipmentNames[exercise.equipment] ?? exercise.equipment ?? undefined,
-      primaryMuscles: translatedMuscles,
-      aliases: translatedName === exercise.name ? [] : [exercise.name],
-      imageUrl: imageUrls[0],
-      secondaryImageUrl: imageUrls[1],
-      sourceUrl: `https://github.com/yuhonas/free-exercise-db/tree/main/exercises/${exercise.id}`,
-      license: 'Unlicense / domaine public',
-    };
-  })
+function indexExercise(exercise) {
+  for (const value of [exercise.name, ...exercise.aliases]) {
+    const normalized = normalize(value);
+    if (normalized) aliasIndex.set(normalized, exercise.id);
+  }
+}
+
+function mergeExercise(current, incoming) {
+  const preferIncomingName = incoming.hasFrenchName && !current.hasFrenchName;
+  const name = preferIncomingName ? incoming.name : current.name;
+  const aliases = distinct([
+    ...current.aliases,
+    ...incoming.aliases,
+    current.name !== name ? current.name : undefined,
+    incoming.name !== name ? incoming.name : undefined,
+  ]).filter((alias) => normalize(alias) !== normalize(name));
+  return {
+    ...current,
+    name,
+    category:
+      current.category === 'À classer' && incoming.category !== 'À classer'
+        ? incoming.category
+        : current.category,
+    equipment: current.equipment ?? incoming.equipment,
+    primaryMuscles: distinct([...current.primaryMuscles, ...incoming.primaryMuscles]),
+    aliases,
+    instructions: incoming.instructions ?? current.instructions,
+    imageUrl: current.imageUrl ?? incoming.imageUrl,
+    secondaryImageUrl: current.secondaryImageUrl ?? incoming.secondaryImageUrl,
+    videoUrl: current.videoUrl ?? incoming.videoUrl,
+    sourceUrl: current.sourceUrl ?? incoming.sourceUrl,
+    license: distinct([current.license, incoming.license]).join(' · '),
+    hasFrenchName: current.hasFrenchName || incoming.hasFrenchName,
+  };
+}
+
+function addExercise(exercise) {
+  const matchingId = [exercise.name, ...exercise.aliases]
+    .map((value) => aliasIndex.get(normalize(value)))
+    .find(Boolean);
+  if (!matchingId) {
+    catalog.set(exercise.id, exercise);
+    indexExercise(exercise);
+    return;
+  }
+
+  const merged = mergeExercise(catalog.get(matchingId), exercise);
+  catalog.set(matchingId, merged);
+  indexExercise(merged);
+}
+
+async function fetchJson(url, label) {
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`${label} download failed (${response.status})`);
+  return response.json();
+}
+
+const [freeExercises, wgerResponse] = await Promise.all([
+  fetchJson(FREE_EXERCISE_DB_URL, 'Free Exercise DB'),
+  fetchJson(WGER_EXERCISE_URL, 'wger exercise catalog'),
+]);
+
+for (const exercise of freeExercises) {
+  const sourceId = normalizedId(exercise.id);
+  const translatedMuscles = distinct(exercise.primaryMuscles.map(translateMuscle));
+  const translatedName = frenchNames[sourceId] ?? exercise.name;
+  const imageUrls = exercise.images.map((path) => `${FREE_EXERCISE_IMAGE_ROOT}${path}`);
+  addExercise({
+    id: `free:${exercise.id}`,
+    name: translatedName,
+    category:
+      translatedMuscles[0] ?? categoryNames[exercise.category?.toLowerCase()] ?? 'À classer',
+    equipment: translateEquipment(exercise.equipment),
+    primaryMuscles: translatedMuscles,
+    aliases: translatedName === exercise.name ? [] : [exercise.name],
+    instructions: exercise.instructions?.join(' '),
+    imageUrl: imageUrls[0],
+    secondaryImageUrl: imageUrls[1],
+    sourceUrl: `https://github.com/yuhonas/free-exercise-db/tree/main/exercises/${exercise.id}`,
+    license: 'Free Exercise DB · domaine public',
+    hasFrenchName: translatedName !== exercise.name,
+  });
+}
+
+for (const exercise of wgerResponse.results) {
+  const french = exercise.translations.find((translation) => translation.language === 12);
+  const english = exercise.translations.find((translation) => translation.language === 2);
+  const preferred = french ?? english ?? exercise.translations[0];
+  if (!preferred?.name) continue;
+
+  const translationNames = exercise.translations
+    .filter((translation) => translation.language === 12 || translation.language === 2)
+    .flatMap((translation) => [
+      translation.name,
+      ...translation.aliases.map((alias) => alias.alias),
+    ]);
+  const muscles = distinct(exercise.muscles.map((muscle) => translateMuscle(muscle.name_en)));
+  const mainImage = exercise.images.find((image) => image.is_main) ?? exercise.images[0];
+  const secondaryImage = exercise.images.find((image) => image.id !== mainImage?.id);
+  const mainVideo =
+    exercise.videos.find((video) => video.is_main) ??
+    exercise.videos.find((video) => /\.(mp4|webm)(?:$|\?)/i.test(video.video)) ??
+    exercise.videos[0];
+  const license = exercise.license?.short_name ?? 'Licence indiquée par wger';
+  const author = exercise.license_author ? ` · ${exercise.license_author}` : '';
+
+  addExercise({
+    id: `wger:${exercise.uuid}`,
+    name: preferred.name.trim(),
+    category: muscles[0] ?? categoryNames[exercise.category?.name?.toLowerCase()] ?? 'À classer',
+    equipment:
+      exercise.equipment.map((item) => translateEquipment(item.name)).join(', ') || undefined,
+    primaryMuscles: muscles,
+    aliases: distinct(translationNames).filter(
+      (alias) => normalize(alias) !== normalize(preferred.name),
+    ),
+    instructions: (french?.description_source ?? english?.description_source)?.trim() || undefined,
+    imageUrl: mainImage?.thumbnails?.medium ?? mainImage?.image,
+    secondaryImageUrl: secondaryImage?.thumbnails?.medium ?? secondaryImage?.image,
+    videoUrl: mainVideo?.video,
+    sourceUrl: `https://wger.de/api/v2/exerciseinfo/${exercise.id}/`,
+    license: `wger · ${license}${author}`,
+    hasFrenchName: Boolean(french),
+  });
+}
+
+const youtubeVideoOverrides = [
+  ['Hack Squat', 'https://www.youtube.com/watch?v=bhfyY8F8F24'],
+  ['Leg Extension', 'https://www.youtube.com/watch?v=mVnpm3eJmKw'],
+  ['Romanian Deadlift', 'https://www.youtube.com/watch?v=CQp5I9KgdXI'],
+  ['Squats bulgares haltères', 'https://www.youtube.com/watch?v=tcEAeBjSkHI'],
+  ['Curl incliné', 'https://www.youtube.com/watch?v=b4jOP-spQW8'],
+];
+
+for (const [exerciseName, videoUrl] of youtubeVideoOverrides) {
+  const exerciseId = aliasIndex.get(normalize(exerciseName));
+  const exercise = exerciseId ? catalog.get(exerciseId) : undefined;
+  if (!exercise || exercise.videoUrl) continue;
+  catalog.set(exercise.id, {
+    ...exercise,
+    videoUrl,
+    license: `${exercise.license} · Vidéo YouTube intégrée depuis la chaîne source`,
+  });
+}
+
+const output = [...catalog.values()]
+  .map(({ hasFrenchName: _hasFrenchName, ...exercise }) => exercise)
   .sort((left, right) => left.name.localeCompare(right.name, 'fr'));
 
 await mkdir('public/data', { recursive: true });
-await writeFile('public/data/exercises.json', `${JSON.stringify(catalog)}\n`, 'utf8');
+await writeFile('public/data/exercises.json', `${JSON.stringify(output)}\n`, 'utf8');
 await writeFile(
   'public/data/exercises-license.txt',
   [
+    'Catalogue d’exercices Hypertrophy',
+    '',
     'Free Exercise DB',
     'Source: https://github.com/yuhonas/free-exercise-db',
     'Licence: Unlicense / domaine public',
     'https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md',
     '',
+    'wger Exercise Data',
+    'Source: https://wger.de/',
+    'Les exercices et médias conservent la licence et l’auteur indiqués par chaque entrée.',
+    'Licence principale des données: CC-BY-SA 4.0',
+    'https://wger.readthedocs.io/en/latest/',
+    '',
+    'YouTube',
+    'Certaines démonstrations sont intégrées avec le lecteur YouTube en mode confidentialité avancée.',
+    'Les vidéos restent hébergées par leurs chaînes respectives et ne sont pas redistribuées par l’application.',
+    '',
   ].join('\n'),
   'utf8',
 );
 
-console.log(`Generated ${catalog.length} strength exercises.`);
+const videoCount = output.filter((exercise) => exercise.videoUrl).length;
+console.log(`Generated ${output.length} unique exercises (${videoCount} with licensed videos).`);

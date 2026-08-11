@@ -362,7 +362,7 @@
           inputmode="search"
           placeholder="Ex. développé, dos, haltères…"
           [value]="catalogSearch()"
-          (input)="catalogSearch.set($any($event.target).value)"
+          (input)="updateCatalogSearch($any($event.target).value)"
         />
       </label>
 
@@ -370,7 +370,7 @@
         <button
           type="button"
           [class.active]="catalogCategory() === ''"
-          (click)="catalogCategory.set('')"
+          (click)="selectCatalogCategory('')"
         >
           Tous
         </button>
@@ -378,7 +378,7 @@
           <button
             type="button"
             [class.active]="catalogCategory() === category"
-            (click)="catalogCategory.set(category)"
+            (click)="selectCatalogCategory(category)"
           >
             {{ category }}
           </button>
@@ -391,7 +391,8 @@
         <p class="catalog-state">{{ catalog.error() }}</p>
       } @else {
         <p class="catalog-summary">
-          {{ filteredCatalog().length }} affichés · {{ catalog.exercises().length }} exercices
+          {{ filteredCatalog().length }} affichés sur {{ matchingCatalog().length }} ·
+          {{ catalog.exercises().length }} exercices au total
         </p>
         <div class="catalog-list">
           @for (exercise of filteredCatalog(); track exercise.id) {
@@ -419,7 +420,14 @@
             <p class="catalog-state">Aucun exercice ne correspond à cette recherche.</p>
           }
         </div>
-        <small class="catalog-license">Illustrations libres issues de Free Exercise DB.</small>
+        @if (filteredCatalog().length < matchingCatalog().length) {
+          <button class="catalog-more" type="button" (click)="showMoreCatalogExercises()">
+            Afficher 80 exercices de plus
+          </button>
+        }
+        <small class="catalog-license">
+          Illustrations et vidéos sous les licences indiquées par Free Exercise DB et wger.
+        </small>
       }
     </section>
   </div>

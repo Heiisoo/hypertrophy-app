@@ -83,6 +83,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      exercise_notes: {
+        Row: {
+          created_at: string;
+          exercise_key: string;
+          exercise_name: string;
+          id: string;
+          note: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          exercise_key: string;
+          exercise_name: string;
+          id: string;
+          note?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          exercise_key?: string;
+          exercise_name?: string;
+          id?: string;
+          note?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       program_days: {
         Row: {
           day_number: number;

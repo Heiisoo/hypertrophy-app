@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
@@ -15,18 +15,36 @@ export class ExerciseMediaComponent {
   readonly videoUrl = input<string>();
 
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly playingVideoUrl = signal<string | undefined>(undefined);
+  private readonly failedVideoUrl = signal<string | undefined>(undefined);
+
+  protected readonly hasVideo = computed(
+    () => Boolean(this.videoUrl()) && this.failedVideoUrl() !== this.videoUrl(),
+  );
+  protected readonly showVideo = computed(
+    () => this.hasVideo() && this.playingVideoUrl() === this.videoUrl(),
+  );
 
   protected readonly youtubeEmbedUrl = computed<SafeResourceUrl | null>(() => {
     const videoId = this.youtubeId(this.videoUrl());
     if (!videoId) return null;
     return this.sanitizer.bypassSecurityTrustResourceUrl(
-      `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&rel=0`,
+      `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&rel=0&autoplay=1`,
     );
   });
 
   protected readonly directVideoUrl = computed(() =>
     this.videoUrl() && !this.youtubeId(this.videoUrl()) ? this.videoUrl() : undefined,
   );
+
+  protected playVideo(): void {
+    this.playingVideoUrl.set(this.videoUrl());
+  }
+
+  protected videoFailed(): void {
+    this.failedVideoUrl.set(this.videoUrl());
+    this.playingVideoUrl.set(undefined);
+  }
 
   private youtubeId(value: string | undefined): string | undefined {
     if (!value) return undefined;

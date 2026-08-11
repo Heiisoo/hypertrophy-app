@@ -14,11 +14,9 @@ import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
 import { ExerciseCatalogService } from '../../core/services/exercise-catalog.service';
+import { ExerciseNoteService } from '../../core/services/exercise-note.service';
 import { ExerciseMediaComponent } from '../../shared/exercise-media/exercise-media.component';
-import {
-  adjustTimerDeadline,
-  remainingTimerSeconds,
-} from '../../core/services/timer-clock';
+import { adjustTimerDeadline, remainingTimerSeconds } from '../../core/services/timer-clock';
 
 interface EditableSet {
   readonly setNumber: number;
@@ -42,6 +40,7 @@ export class SessionPage implements OnDestroy {
   protected readonly workout = inject(WorkoutSessionService);
   protected readonly catalog = inject(ExerciseCatalogService);
   private readonly history = inject(HistoryService);
+  private readonly exerciseNotes = inject(ExerciseNoteService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -86,10 +85,14 @@ export class SessionPage implements OnDestroy {
   protected readonly finishConfirmationVisible = signal(false);
   protected readonly abandonConfirmationVisible = signal(false);
   protected readonly sessionStarting = signal(false);
+  protected readonly noteExpanded = signal(false);
+  protected readonly exerciseNote = signal('');
+  protected readonly noteStatus = signal('');
 
   private readonly setCache = new Map<string, readonly EditableSet[]>();
   private readonly previousLabels = new Map<string, string>();
   private timerId?: ReturnType<typeof setInterval>;
+  private noteSaveTimer?: ReturnType<typeof setTimeout>;
   private restEndsAt?: number;
   private readonly refreshRestTimerWhenVisible = (): void => {
     if (document.visibilityState === 'visible') this.refreshRestTimer();
@@ -116,6 +119,7 @@ export class SessionPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
+    if (this.noteSaveTimer) clearTimeout(this.noteSaveTimer);
     document.removeEventListener('visibilitychange', this.refreshRestTimerWhenVisible);
     window.removeEventListener('focus', this.refreshRestTimer);
     window.removeEventListener('pageshow', this.refreshRestTimer);
@@ -127,6 +131,7 @@ export class SessionPage implements OnDestroy {
     this.activeExerciseIndex.set(index);
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
     this.updatePreviousLabel();
+    void this.loadExerciseNote();
   }
 
   protected async selectDay(dayId: string): Promise<void> {
@@ -149,6 +154,21 @@ export class SessionPage implements OnDestroy {
       replaceUrl: true,
     });
     await this.hydratePreviousSets();
+    await this.loadExerciseNote();
+  }
+
+  protected toggleNote(): void {
+    this.noteExpanded.update((expanded) => !expanded);
+  }
+
+  protected updateExerciseNote(value: string): void {
+    this.exerciseNote.set(value.slice(0, 2000));
+    this.noteStatus.set('Enregistrement…');
+    if (this.noteSaveTimer) clearTimeout(this.noteSaveTimer);
+    const exerciseName = this.activeExercise()?.name;
+    const content = this.exerciseNote();
+    if (!exerciseName) return;
+    this.noteSaveTimer = setTimeout(() => void this.saveExerciseNote(exerciseName, content), 650);
   }
 
   protected adjust(setIndex: number, field: 'weightKg' | 'reps' | 'rir', amount: number): void {
@@ -249,6 +269,7 @@ export class SessionPage implements OnDestroy {
       return;
     }
     await this.hydratePreviousSets();
+    await this.loadExerciseNote();
   }
 
   private async prepareSession(sessionId: string): Promise<void> {
@@ -258,6 +279,26 @@ export class SessionPage implements OnDestroy {
     }
     await this.hydratePreviousSets(sessionId);
     await this.hydrateActiveSets(sessionId);
+    await this.loadExerciseNote();
+  }
+
+  private async loadExerciseNote(): Promise<void> {
+    const exerciseName = this.activeExercise()?.name;
+    if (!exerciseName) return;
+    this.noteStatus.set('Chargement…');
+    const note = await this.exerciseNotes.load(exerciseName);
+    if (this.activeExercise()?.name !== exerciseName) return;
+    this.exerciseNote.set(note?.content ?? '');
+    this.noteExpanded.set(Boolean(note?.content));
+    this.noteStatus.set(note ? 'Sauvegardée' : '');
+  }
+
+  private async saveExerciseNote(exerciseName: string, content: string): Promise<void> {
+    this.noteSaveTimer = undefined;
+    await this.exerciseNotes.save(exerciseName, content);
+    if (this.activeExercise()?.name === exerciseName && this.exerciseNote() === content) {
+      this.noteStatus.set('Sauvegardée');
+    }
   }
 
   private async hydrateActiveSets(sessionId: string): Promise<void> {
@@ -382,7 +423,7 @@ export class SessionPage implements OnDestroy {
       this.clearTimer();
       this.restEndsAt = undefined;
     }
-  }
+  };
 
   private clearTimer(): void {
     if (this.timerId) {

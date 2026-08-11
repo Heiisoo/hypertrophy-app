@@ -7,9 +7,10 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "catalog:build": "node scripts/build-exercise-catalog.mjs",
+    "catalog:check": "node scripts/validate-exercise-catalog.mjs",
     "test": "ng test",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "check": "pnpm test && pnpm typecheck && pnpm build"
+    "check": "pnpm catalog:check && pnpm test && pnpm typecheck && pnpm build"
   },
   "private": true,
   "engines": {

@@ -600,6 +600,15 @@
   padding-top: 2px;
   text-align: center;
 }
+.catalog-more {
+  min-height: 42px;
+  border: 1px solid rgb(184 165 138 / 22%);
+  border-radius: 12px;
+  color: var(--color-champagne);
+  background: rgb(184 165 138 / 6%);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
 
 @media (max-width: 430px) {
   .cycle-builder {

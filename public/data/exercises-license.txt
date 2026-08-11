@@ -1,4 +1,16 @@
+Catalogue d’exercices Hypertrophy
+
 Free Exercise DB
 Source: https://github.com/yuhonas/free-exercise-db
 Licence: Unlicense / domaine public
 https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md
+
+wger Exercise Data
+Source: https://wger.de/
+Les exercices et médias conservent la licence et l’auteur indiqués par chaque entrée.
+Licence principale des données: CC-BY-SA 4.0
+https://wger.readthedocs.io/en/latest/
+
+YouTube
+Certaines démonstrations sont intégrées avec le lecteur YouTube en mode confidentialité avancée.
+Les vidéos restent hébergées par leurs chaînes respectives et ne sont pas redistribuées par l’application.
