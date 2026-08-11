@@ -83,10 +83,19 @@ export interface WorkoutSet {
   readonly completedAt?: string;
 }
 
+export interface ExerciseNote {
+  readonly id: string;
+  readonly ownerId: string;
+  readonly exerciseKey: string;
+  readonly exerciseName: string;
+  readonly content: string;
+  readonly updatedAt: string;
+}
+
 export interface SyncQueueItem {
   id?: number;
   readonly ownerId: string;
-  readonly entityType: 'session' | 'set';
+  readonly entityType: 'session' | 'set' | 'note';
   readonly entityId: string;
   readonly operation: 'upsert' | 'delete';
   readonly status: SyncStatus;

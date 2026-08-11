@@ -37,13 +37,14 @@ export class ProgramPage {
   protected readonly catalogDayId = signal('');
   protected readonly catalogSearch = signal('');
   protected readonly catalogCategory = signal('');
+  protected readonly catalogVisibleLimit = signal(80);
   protected readonly trainingDayCount = computed(
     () => this.store.program().days.filter((day) => day.kind === 'training').length,
   );
   protected readonly recoveryDayCount = computed(
     () => this.store.program().days.filter((day) => day.kind === 'recovery').length,
   );
-  protected readonly filteredCatalog = computed(() => {
+  protected readonly matchingCatalog = computed(() => {
     const query = this.catalogSearch().trim().toLocaleLowerCase('fr');
     const category = this.catalogCategory();
     return this.catalog
@@ -51,12 +52,20 @@ export class ProgramPage {
       .filter((exercise) => !category || exercise.category === category)
       .filter((exercise) => {
         if (!query) return true;
-        return [exercise.name, exercise.category, exercise.equipment, ...exercise.aliases]
+        return [
+          exercise.name,
+          exercise.category,
+          exercise.equipment,
+          ...exercise.primaryMuscles,
+          ...exercise.aliases,
+        ]
           .filter(Boolean)
           .some((value) => value?.toLocaleLowerCase('fr').includes(query));
-      })
-      .slice(0, 80);
+      });
   });
+  protected readonly filteredCatalog = computed(() =>
+    this.matchingCatalog().slice(0, this.catalogVisibleLimit()),
+  );
 
   protected toggleDay(dayId: string): void {
     this.expandedDayId.update((current) => (current === dayId ? '' : dayId));
@@ -149,7 +158,22 @@ export class ProgramPage {
     this.catalogDayId.set(dayId);
     this.catalogSearch.set('');
     this.catalogCategory.set('');
+    this.catalogVisibleLimit.set(80);
     void this.catalog.load();
+  }
+
+  protected updateCatalogSearch(value: string): void {
+    this.catalogSearch.set(value);
+    this.catalogVisibleLimit.set(80);
+  }
+
+  protected selectCatalogCategory(category: string): void {
+    this.catalogCategory.set(category);
+    this.catalogVisibleLimit.set(80);
+  }
+
+  protected showMoreCatalogExercises(): void {
+    this.catalogVisibleLimit.update((limit) => limit + 80);
   }
 
   protected closeCatalog(): void {
@@ -188,7 +212,9 @@ export class ProgramPage {
   }
 
   protected restoreDefault(): void {
-    if (!window.confirm('Remettre le programme initial ? Tes personnalisations seront remplacées.')) {
+    if (
+      !window.confirm('Remettre le programme initial ? Tes personnalisations seront remplacées.')
+    ) {
       return;
     }
     void this.store.restoreDefault();
