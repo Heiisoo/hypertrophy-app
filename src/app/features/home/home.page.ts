@@ -40,18 +40,18 @@ export class HomePage {
     return new Set(
       this.history
         .completedSessions()
-        .filter((session) => new Date(session.finishedAt ?? session.startedAt).getTime() >= cycleStart)
+        .filter(
+          (session) => new Date(session.finishedAt ?? session.startedAt).getTime() >= cycleStart,
+        )
         .map((session) => session.programDayId),
     );
   });
-  protected readonly cycleTrainingDays = computed(() =>
-    this.store.program().days.filter((day) => day.kind === 'training'),
-  );
+  protected readonly cycleDays = computed(() => this.store.program().days);
   protected readonly completedCycleSessions = computed(
-    () => this.cycleTrainingDays().filter((day) => this.completedDayIds().has(day.id)).length,
+    () => this.cycleDays().filter((day) => this.completedDayIds().has(day.id)).length,
   );
   protected readonly cycleProgress = computed(() => {
-    const total = this.cycleTrainingDays().length;
+    const total = this.cycleDays().length;
     return total === 0 ? 0 : Math.round((this.completedCycleSessions() / total) * 100);
   });
 
@@ -60,9 +60,5 @@ export class HomePage {
     await this.router.navigate(['/seance'], {
       queryParams: activeSession ? undefined : { day: this.store.today().id },
     });
-  }
-
-  protected async chooseSession(): Promise<void> {
-    await this.router.navigate(['/seance']);
   }
 }

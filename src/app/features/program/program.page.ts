@@ -75,6 +75,13 @@ export class ProgramPage {
     return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
   }
 
+  protected recoveryTarget(exercise: ExercisePrescription): string {
+    if (exercise.trackingMode === 'cardio') {
+      return `${exercise.targetDurationMinutes ?? 0} min · ${exercise.targetSpeedKmh ?? 0} km/h · ${exercise.targetInclinePercent ?? 0} %`;
+    }
+    return `${exercise.targetDurationMinutes ?? 0} min`;
+  }
+
   protected toggleEditing(): void {
     this.editing.update((value) => !value);
   }

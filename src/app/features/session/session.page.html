@@ -30,15 +30,19 @@
         <h1 id="day-picker-title">Choisis ton entraînement</h1>
       </div>
       <div class="day-picker-list" role="list">
-        @for (candidate of trainingDays(); track candidate.id) {
+        @for (candidate of sessionDays(); track candidate.id) {
           <button
             type="button"
             [class.active]="candidate.id === day().id"
+            [class.recovery]="candidate.kind === 'recovery'"
             (click)="selectDay(candidate.id)"
           >
             <span>J{{ candidate.dayNumber }}</span>
             <strong>{{ candidate.shortTitle }}</strong>
-            <small>{{ candidate.exercises.length }} exercices</small>
+            <small>
+              {{ candidate.exercises.length }}
+              {{ candidate.kind === 'recovery' ? 'activités' : 'exercices' }}
+            </small>
           </button>
         }
       </div>
@@ -51,10 +55,12 @@
 
       <div class="start-metrics" aria-label="Résumé de la séance">
         <span
-          ><strong>{{ day().exercises.length }}</strong> exercices</span
+          ><strong>{{ day().exercises.length }}</strong>
+          {{ day().kind === 'recovery' ? 'activités' : 'exercices' }}</span
         >
         <span
-          ><strong>{{ totalSets() }}</strong> séries</span
+          ><strong>{{ totalSets() }}</strong>
+          {{ day().kind === 'recovery' ? 'à valider' : 'séries' }}</span
         >
         <span
           ><strong>~{{ day().durationMinutes }}</strong> min</span
@@ -67,7 +73,13 @@
         [disabled]="sessionStarting()"
         (click)="startSession()"
       >
-        {{ sessionStarting() ? 'Démarrage…' : 'Démarrer la séance' }}
+        {{
+          sessionStarting()
+            ? 'Démarrage…'
+            : day().kind === 'recovery'
+              ? 'Commencer la récupération'
+              : 'Démarrer la séance'
+        }}
       </button>
       <small>Le chrono et l'enregistrement commencent uniquement après cet appui.</small>
     </article>
@@ -110,15 +122,32 @@
         </header>
 
         <div class="exercise-meta">
-          <span
-            ><strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong> répétitions</span
-          >
-          <span
-            ><strong>RIR {{ exercise.targetRir }}</strong> cible</span
-          >
-          <span
-            ><strong>{{ formatRest(exercise.restSeconds) }}</strong> repos</span
-          >
+          @if (exercise.trackingMode === 'cardio') {
+            <span
+              ><strong>{{ exercise.targetDurationMinutes }} min</strong> durée</span
+            >
+            <span
+              ><strong>{{ exercise.targetSpeedKmh }} km/h</strong> vitesse</span
+            >
+            <span
+              ><strong>{{ exercise.targetInclinePercent }} %</strong> inclinaison</span
+            >
+          } @else if (exercise.trackingMode === 'duration') {
+            <span
+              ><strong>{{ exercise.targetDurationMinutes }} min</strong> objectif</span
+            >
+            <span><strong>Récupération</strong> légère</span>
+          } @else {
+            <span
+              ><strong>{{ exercise.sets }} × {{ exercise.repRange }}</strong> répétitions</span
+            >
+            <span
+              ><strong>RIR {{ exercise.targetRir }}</strong> cible</span
+            >
+            <span
+              ><strong>{{ formatRest(exercise.restSeconds) }}</strong> repos</span
+            >
+          }
         </div>
 
         <div class="exercise-media">
@@ -144,7 +173,11 @@
                 @if (exerciseNote()) {
                   {{ exerciseNote() }}
                 } @else {
-                  Banc, réglage, prise, sensation…
+                  {{
+                    day().kind === 'recovery'
+                      ? 'Réglage, sensations, difficulté…'
+                      : 'Banc, réglage, prise, sensation…'
+                  }}
                 }
               </small>
             </span>
@@ -156,7 +189,11 @@
                 rows="3"
                 maxlength="2000"
                 [attr.aria-label]="'Note personnelle pour ' + exercise.name"
-                placeholder="Ex. banc à 30°, cran 4, prise neutre…"
+                [placeholder]="
+                  day().kind === 'recovery'
+                    ? 'Ex. tapis utilisé, gêne particulière, ressenti…'
+                    : 'Ex. banc à 30°, cran 4, prise neutre…'
+                "
                 [value]="exerciseNote()"
                 (input)="updateExerciseNote($any($event.target).value)"
               ></textarea>
@@ -178,115 +215,192 @@
           <p class="exercise-cue">{{ exercise.cue }}</p>
         }
 
-        <div class="set-list">
-          <div class="set-labels">
-            <span>Série</span><span>Charge</span><span>Reps</span><span>RIR</span><span></span>
-          </div>
-          @for (set of sets(); track set.setNumber; let index = $index) {
-            <div class="set-row" [class.completed]="set.completed">
-              <span class="set-number">{{ set.setNumber }}</span>
-              <div class="stepper">
-                <button
-                  type="button"
-                  (click)="adjust(index, 'weightKg', -1)"
-                  aria-label="Retirer 1 kg"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  inputmode="decimal"
-                  min="0"
-                  step="1"
-                  [value]="set.weightKg"
-                  [disabled]="set.completed"
-                  (change)="setValue(index, 'weightKg', $any($event.target).value)"
-                  [attr.aria-label]="'Charge de la série ' + set.setNumber"
-                /><small>kg</small>
-                <button
-                  type="button"
-                  (click)="adjust(index, 'weightKg', 1)"
-                  aria-label="Ajouter 1 kg"
-                >
-                  +
-                </button>
-              </div>
-              <div class="stepper compact">
-                <button
-                  type="button"
-                  (click)="adjust(index, 'reps', -1)"
-                  aria-label="Retirer une répétition"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  inputmode="numeric"
-                  min="0"
-                  step="1"
-                  [value]="set.reps"
-                  [disabled]="set.completed"
-                  (change)="setValue(index, 'reps', $any($event.target).value)"
-                  [attr.aria-label]="'Répétitions de la série ' + set.setNumber"
-                />
-                <button
-                  type="button"
-                  (click)="adjust(index, 'reps', 1)"
-                  aria-label="Ajouter une répétition"
-                >
-                  +
-                </button>
-              </div>
-              <div class="stepper compact">
-                <button
-                  type="button"
-                  (click)="adjust(index, 'rir', -1)"
-                  aria-label="Réduire le RIR"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  inputmode="numeric"
-                  min="0"
-                  max="5"
-                  step="1"
-                  [value]="set.rir"
-                  [disabled]="set.completed"
-                  (change)="setValue(index, 'rir', $any($event.target).value)"
-                  [attr.aria-label]="'RIR de la série ' + set.setNumber"
-                />
-                <button
-                  type="button"
-                  (click)="adjust(index, 'rir', 1)"
-                  aria-label="Augmenter le RIR"
-                >
-                  +
-                </button>
-              </div>
-              <button
-                class="check-button"
-                type="button"
-                (click)="toggleSet(index)"
-                [attr.aria-label]="
-                  set.completed
-                    ? 'Annuler la série ' + set.setNumber
-                    : 'Valider la série ' + set.setNumber
-                "
+        @if (exercise.trackingMode === 'cardio' || exercise.trackingMode === 'duration') {
+          @if (sets()[0]; as recoverySet) {
+            <div class="recovery-tracking" [class.completed]="recoverySet.completed">
+              <div
+                class="recovery-metric-grid"
+                [class.duration-only]="exercise.trackingMode === 'duration'"
               >
-                @if (set.completed) {
-                  <span>✓</span>
-                } @else {
-                  <span></span>
+                <label>
+                  <span>Durée</span>
+                  <div class="recovery-stepper">
+                    <button type="button" (click)="adjustRecovery('durationMinutes', -1)">−</button>
+                    <input
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      step="1"
+                      [disabled]="recoverySet.completed"
+                      [value]="recoverySet.durationMinutes"
+                      (change)="setRecoveryValue('durationMinutes', $any($event.target).value)"
+                      aria-label="Durée en minutes"
+                    />
+                    <small>min</small>
+                    <button type="button" (click)="adjustRecovery('durationMinutes', 1)">+</button>
+                  </div>
+                </label>
+                @if (exercise.trackingMode === 'cardio') {
+                  <label>
+                    <span>Vitesse</span>
+                    <div class="recovery-stepper">
+                      <button type="button" (click)="adjustRecovery('speedKmh', -0.1)">−</button>
+                      <input
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        step="0.1"
+                        [disabled]="recoverySet.completed"
+                        [value]="recoverySet.speedKmh"
+                        (change)="setRecoveryValue('speedKmh', $any($event.target).value)"
+                        aria-label="Vitesse en kilomètres par heure"
+                      />
+                      <small>km/h</small>
+                      <button type="button" (click)="adjustRecovery('speedKmh', 0.1)">+</button>
+                    </div>
+                  </label>
+                  <label>
+                    <span>Inclinaison</span>
+                    <div class="recovery-stepper">
+                      <button type="button" (click)="adjustRecovery('inclinePercent', -0.5)">
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        step="0.5"
+                        [disabled]="recoverySet.completed"
+                        [value]="recoverySet.inclinePercent"
+                        (change)="setRecoveryValue('inclinePercent', $any($event.target).value)"
+                        aria-label="Inclinaison en pourcentage"
+                      />
+                      <small>%</small>
+                      <button type="button" (click)="adjustRecovery('inclinePercent', 0.5)">
+                        +
+                      </button>
+                    </div>
+                  </label>
                 }
+              </div>
+              <button class="recovery-check" type="button" (click)="toggleSet(0)">
+                <i>{{ recoverySet.completed ? '✓' : '' }}</i>
+                {{ recoverySet.completed ? 'Activité terminée' : 'Valider cette activité' }}
               </button>
             </div>
           }
-        </div>
+        } @else {
+          <div class="set-list">
+            <div class="set-labels">
+              <span>Série</span><span>Charge</span><span>Reps</span><span>RIR</span><span></span>
+            </div>
+            @for (set of sets(); track set.setNumber; let index = $index) {
+              <div class="set-row" [class.completed]="set.completed">
+                <span class="set-number">{{ set.setNumber }}</span>
+                <div class="stepper">
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'weightKg', -1)"
+                    aria-label="Retirer 1 kg"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="1"
+                    [value]="set.weightKg"
+                    [disabled]="set.completed"
+                    (change)="setValue(index, 'weightKg', $any($event.target).value)"
+                    [attr.aria-label]="'Charge de la série ' + set.setNumber"
+                  /><small>kg</small>
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'weightKg', 1)"
+                    aria-label="Ajouter 1 kg"
+                  >
+                    +
+                  </button>
+                </div>
+                <div class="stepper compact">
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'reps', -1)"
+                    aria-label="Retirer une répétition"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
+                    [value]="set.reps"
+                    [disabled]="set.completed"
+                    (change)="setValue(index, 'reps', $any($event.target).value)"
+                    [attr.aria-label]="'Répétitions de la série ' + set.setNumber"
+                  />
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'reps', 1)"
+                    aria-label="Ajouter une répétition"
+                  >
+                    +
+                  </button>
+                </div>
+                <div class="stepper compact">
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'rir', -1)"
+                    aria-label="Réduire le RIR"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    max="5"
+                    step="1"
+                    [value]="set.rir"
+                    [disabled]="set.completed"
+                    (change)="setValue(index, 'rir', $any($event.target).value)"
+                    [attr.aria-label]="'RIR de la série ' + set.setNumber"
+                  />
+                  <button
+                    type="button"
+                    (click)="adjust(index, 'rir', 1)"
+                    aria-label="Augmenter le RIR"
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  class="check-button"
+                  type="button"
+                  (click)="toggleSet(index)"
+                  [attr.aria-label]="
+                    set.completed
+                      ? 'Annuler la série ' + set.setNumber
+                      : 'Valider la série ' + set.setNumber
+                  "
+                >
+                  @if (set.completed) {
+                    <span>✓</span>
+                  } @else {
+                    <span></span>
+                  }
+                </button>
+              </div>
+            }
+          </div>
+        }
 
         <div class="exercise-progress">
           <span
-            ><strong>{{ completedSets() }}</strong> / {{ sets().length }} séries</span
+            ><strong>{{ completedSets() }}</strong> / {{ sets().length }}
+            {{ day().kind === 'recovery' ? 'activité' : 'séries' }}</span
           >
           <div><i [style.width.%]="progress()"></i></div>
         </div>
@@ -298,7 +412,7 @@
         [disabled]="activeExerciseIndex() === day().exercises.length - 1"
         (click)="selectExercise(activeExerciseIndex() + 1)"
       >
-        Exercice suivant <span>→</span>
+        {{ day().kind === 'recovery' ? 'Activité suivante' : 'Exercice suivant' }} <span>→</span>
       </button>
     }
   }
@@ -352,8 +466,14 @@
       (click)="$event.stopPropagation()"
     >
       <span class="eyebrow">Terminer la séance</span>
-      <h2 id="finish-title">Il reste {{ totalSets() - completedTotal() }} séries.</h2>
-      <p>Les séries déjà validées seront conservées et la durée sera enregistrée.</p>
+      <h2 id="finish-title">
+        Il reste {{ totalSets() - completedTotal() }}
+        {{ day().kind === 'recovery' ? 'activités' : 'séries' }}.
+      </h2>
+      <p>
+        Les {{ day().kind === 'recovery' ? 'activités' : 'séries' }} déjà validées seront conservées
+        et la durée sera enregistrée.
+      </p>
       <div>
         <button type="button" (click)="cancelFinishSession()">Continuer</button>
         <button class="confirm" type="button" (click)="confirmFinishSession()">

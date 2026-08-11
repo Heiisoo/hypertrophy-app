@@ -202,11 +202,31 @@
                 }
               </div>
             } @else {
+              <div class="exercise-list recovery-activity-list">
+                @for (exercise of day.exercises; track exercise.id; let index = $index) {
+                  <div class="exercise-row">
+                    <span>{{ (index + 1).toString().padStart(2, '0') }}</span>
+                    <div>
+                      <strong>{{ exercise.name }}</strong>
+                      <small>{{ exercise.category }}</small>
+                    </div>
+                    <div class="prescription">
+                      <strong>{{ recoveryTarget(exercise) }}</strong>
+                      <small>objectif modifiable pendant la séance</small>
+                    </div>
+                  </div>
+                }
+              </div>
               <ul class="recovery-list">
                 @for (item of day.recoveryItems; track item) {
                   <li>{{ item }}</li>
                 }
               </ul>
+              <div class="day-actions">
+                <a [routerLink]="['/seance']" [queryParams]="{ day: day.id }">
+                  Choisir cette récupération
+                </a>
+              </div>
             }
           </div>
         }

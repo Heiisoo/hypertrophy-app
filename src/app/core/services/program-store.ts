@@ -332,6 +332,11 @@ export class ProgramStore implements OnDestroy {
       program.days.length === 7 && !hasSecondRecoveryDay && recommendedDayEight
         ? [...program.days, structuredClone(recommendedDayEight)]
         : program.days;
+    const daysWithRecoveryActivities = days.map((day) =>
+      day.kind === 'recovery' && day.exercises.length === 0
+        ? { ...day, exercises: this.recoveryExercisesFor(day.id) }
+        : day,
+    );
     return this.renumberDays({
       ...program,
       description:
@@ -340,7 +345,7 @@ export class ProgramStore implements OnDestroy {
           ? SEED_PROGRAM.description
           : program.description,
       rotationStartedAt: program.rotationStartedAt ?? this.dateKey(),
-      days,
+      days: daysWithRecoveryActivities,
     });
   }
 
@@ -359,10 +364,54 @@ export class ProgramStore implements OnDestroy {
       shortTitle: 'Repos',
       focus: 'Faire redescendre la fatigue',
       kind: 'recovery',
-      durationMinutes: 30,
-      exercises: [],
+      durationMinutes: 40,
+      exercises: this.recoveryExercisesFor(),
       recoveryItems: ['Marche légère', 'Mobilité', 'Hydratation et sommeil'],
     };
+  }
+
+  private recoveryExercisesFor(dayId?: string): readonly ExercisePrescription[] {
+    const matchingSeedDay = dayId
+      ? SEED_PROGRAM.days.find((day) => day.id === dayId && day.kind === 'recovery')
+      : undefined;
+    if (matchingSeedDay?.exercises.length) return structuredClone(matchingSeedDay.exercises);
+    return [
+      {
+        id: `recovery-treadmill-${crypto.randomUUID()}`,
+        name: 'Marche sur tapis incliné',
+        category: 'Cardio léger',
+        sets: 1,
+        repRange: '25 min',
+        targetRir: '0',
+        restSeconds: 0,
+        trackingMode: 'cardio',
+        targetDurationMinutes: 25,
+        targetSpeedKmh: 5,
+        targetInclinePercent: 5,
+      },
+      {
+        id: `recovery-abs-${crypto.randomUUID()}`,
+        name: 'Abdos & gainage léger',
+        category: 'Abdominaux',
+        sets: 1,
+        repRange: '10 min',
+        targetRir: '0',
+        restSeconds: 0,
+        trackingMode: 'duration',
+        targetDurationMinutes: 10,
+      },
+      {
+        id: `recovery-mobility-${crypto.randomUUID()}`,
+        name: 'Mobilité corps entier',
+        category: 'Mobilité',
+        sets: 1,
+        repRange: '8 min',
+        targetRir: '0',
+        restSeconds: 0,
+        trackingMode: 'duration',
+        targetDurationMinutes: 8,
+      },
+    ];
   }
 
   private dateKey(date = new Date()): string {
