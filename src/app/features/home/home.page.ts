@@ -5,6 +5,7 @@ import { AuthStore } from '../../core/services/auth-store';
 import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
+import { GymPreferenceService } from '../../core/services/gym-preference.service';
 
 @Component({
   selector: 'app-home-page',
@@ -19,6 +20,7 @@ export class HomePage {
   protected readonly sync = inject(SyncService);
   protected readonly history = inject(HistoryService);
   protected readonly workout = inject(WorkoutSessionService);
+  protected readonly gymPreference = inject(GymPreferenceService);
   private readonly router = inject(Router);
   protected readonly dateLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',

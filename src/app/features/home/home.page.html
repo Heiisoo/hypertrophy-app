@@ -109,7 +109,12 @@
     </article>
     <article class="surface-card stat-card">
       <span class="stat-icon champagne">◆</span>
-      <p>Meilleur set</p>
+      <p>
+        Meilleur set
+        @if (gymPreference.selectedGymId()) {
+          · {{ gymPreference.label(gymPreference.selectedGymId()) }}
+        }
+      </p>
       <strong>
         @if (history.bestSet(); as best) {
           {{ best.weightKg }} × {{ best.reps }}

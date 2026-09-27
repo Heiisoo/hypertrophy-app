@@ -8,13 +8,18 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { hypertrophyDb } from '../../core/database/hypertrophy.database';
-import { ExercisePrescription } from '../../core/models/training.models';
+import { ExercisePrescription, GymId, WorkoutSet } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
 import { SyncService } from '../../core/services/sync.service';
 import { HistoryService } from '../../core/services/history.service';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
 import { ExerciseCatalogService } from '../../core/services/exercise-catalog.service';
 import { ExerciseNoteService } from '../../core/services/exercise-note.service';
+import {
+  GYM_OPTIONS,
+  GymOption,
+  GymPreferenceService,
+} from '../../core/services/gym-preference.service';
 import { ExerciseMediaComponent } from '../../shared/exercise-media/exercise-media.component';
 import { adjustTimerDeadline, remainingTimerSeconds } from '../../core/services/timer-clock';
 
@@ -44,11 +49,21 @@ export class SessionPage implements OnDestroy {
   protected readonly catalog = inject(ExerciseCatalogService);
   private readonly history = inject(HistoryService);
   private readonly exerciseNotes = inject(ExerciseNoteService);
+  protected readonly gymPreference = inject(GymPreferenceService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly sessionDays = computed(() => this.store.program().days);
   protected readonly selectedDayId = signal('');
+  protected readonly gyms = GYM_OPTIONS;
+  protected readonly selectedGymId = computed<GymOption['id'] | null>(() => {
+    const session = this.workout.activeSession();
+    if (!session) return this.gymPreference.selectedGymId();
+    return session.gymId === 'basic-fit' || session.gymId === 'fitness-park' ? session.gymId : null;
+  });
+  protected readonly selectedGymLabel = computed(() =>
+    this.gymPreference.label(this.selectedGymId()),
+  );
 
   protected readonly day = computed(() => {
     const today = this.store.today();
@@ -82,7 +97,8 @@ export class SessionPage implements OnDestroy {
   protected readonly restSeconds = signal(0);
   protected readonly timerVisible = computed(() => this.restSeconds() > 0);
   protected readonly timerLabel = computed(() => this.formatTimer(this.restSeconds()));
-  protected readonly previousPerformance = signal('Aucune donnée locale');
+  protected readonly previousPerformance = signal('Aucune donnée dans cette salle');
+  protected readonly otherGymPerformance = signal('');
   protected readonly finishConfirmationVisible = signal(false);
   protected readonly abandonConfirmationVisible = signal(false);
   protected readonly sessionStarting = signal(false);
@@ -92,6 +108,7 @@ export class SessionPage implements OnDestroy {
 
   private readonly setCache = new Map<string, readonly EditableSet[]>();
   private readonly previousLabels = new Map<string, string>();
+  private readonly otherGymLabels = new Map<string, string>();
   private timerId?: ReturnType<typeof setInterval>;
   private noteSaveTimer?: ReturnType<typeof setTimeout>;
   private restEndsAt?: number;
@@ -155,6 +172,23 @@ export class SessionPage implements OnDestroy {
     await this.loadExerciseNote();
   }
 
+  protected async selectGym(gymId: GymOption['id']): Promise<void> {
+    if (gymId === this.selectedGymId()) return;
+    this.gymPreference.select(gymId);
+
+    const session = this.workout.activeSession();
+    if (session) {
+      await this.workout.changeGym(gymId);
+      const hasCompletedSets = [...this.setCache.values()].flat().some((set) => set.completed);
+      if (!hasCompletedSets) this.resetSetCache();
+      await this.hydratePreviousSets(session.id, !hasCompletedSets);
+    } else {
+      this.resetSetCache();
+      await this.hydratePreviousSets();
+    }
+    await this.loadExerciseNote();
+  }
+
   protected toggleNote(): void {
     this.noteExpanded.update((expanded) => !expanded);
   }
@@ -164,9 +198,13 @@ export class SessionPage implements OnDestroy {
     this.noteStatus.set('Enregistrement…');
     if (this.noteSaveTimer) clearTimeout(this.noteSaveTimer);
     const exerciseName = this.activeExercise()?.name;
+    const gymId = this.selectedGymId();
     const content = this.exerciseNote();
-    if (!exerciseName) return;
-    this.noteSaveTimer = setTimeout(() => void this.saveExerciseNote(exerciseName, content), 650);
+    if (!exerciseName || !gymId) return;
+    this.noteSaveTimer = setTimeout(
+      () => void this.saveExerciseNote(exerciseName, gymId, content),
+      650,
+    );
   }
 
   protected adjust(setIndex: number, field: 'weightKg' | 'reps' | 'rir', amount: number): void {
@@ -277,10 +315,12 @@ export class SessionPage implements OnDestroy {
   }
 
   protected async startSession(): Promise<void> {
-    if (this.sessionStarting()) return;
+    const gymId = this.selectedGymId();
+    if (this.sessionStarting() || !gymId) return;
     this.sessionStarting.set(true);
     try {
-      const session = await this.workout.start(this.day().id);
+      this.gymPreference.select(gymId);
+      const session = await this.workout.start(this.day().id, gymId);
       await this.prepareSession(session.id);
     } finally {
       this.sessionStarting.set(false);
@@ -310,19 +350,28 @@ export class SessionPage implements OnDestroy {
 
   private async loadExerciseNote(): Promise<void> {
     const exerciseName = this.activeExercise()?.name;
-    if (!exerciseName) return;
+    const gymId = this.selectedGymId();
+    if (!exerciseName || !gymId) return;
     this.noteStatus.set('Chargement…');
-    const note = await this.exerciseNotes.load(exerciseName);
-    if (this.activeExercise()?.name !== exerciseName) return;
+    const note = await this.exerciseNotes.load(exerciseName, gymId);
+    if (this.activeExercise()?.name !== exerciseName || this.selectedGymId() !== gymId) return;
     this.exerciseNote.set(note?.content ?? '');
     this.noteExpanded.set(Boolean(note?.content));
     this.noteStatus.set(note ? 'Sauvegardée' : '');
   }
 
-  private async saveExerciseNote(exerciseName: string, content: string): Promise<void> {
+  private async saveExerciseNote(
+    exerciseName: string,
+    gymId: Exclude<GymId, 'unspecified'>,
+    content: string,
+  ): Promise<void> {
     this.noteSaveTimer = undefined;
-    await this.exerciseNotes.save(exerciseName, content);
-    if (this.activeExercise()?.name === exerciseName && this.exerciseNote() === content) {
+    await this.exerciseNotes.save(exerciseName, gymId, content);
+    if (
+      this.activeExercise()?.name === exerciseName &&
+      this.selectedGymId() === gymId &&
+      this.exerciseNote() === content
+    ) {
       this.noteStatus.set('Sauvegardée');
     }
   }
@@ -407,37 +456,53 @@ export class SessionPage implements OnDestroy {
     }));
   }
 
-  private async hydratePreviousSets(activeSessionId?: string): Promise<void> {
+  private async hydratePreviousSets(
+    activeSessionId?: string,
+    applyPreviousValues = true,
+  ): Promise<void> {
+    const gymId = this.selectedGymId();
+    if (!gymId) {
+      this.previousLabels.clear();
+      this.otherGymLabels.clear();
+      this.updatePreviousLabel();
+      return;
+    }
+    const otherGym = this.gymPreference.otherGym(gymId);
+    this.previousLabels.clear();
+    this.otherGymLabels.clear();
     await Promise.all(
       this.day().exercises.map(async (exercise) => {
-        const previous = await this.history.previousSets(exercise.id, activeSessionId);
+        const [previous, otherPrevious] = await Promise.all([
+          this.history.previousSets(exercise.id, gymId, activeSessionId),
+          this.history.previousSets(exercise.id, otherGym.id, activeSessionId),
+        ]);
+        if (otherPrevious.length > 0) {
+          this.otherGymLabels.set(
+            exercise.id,
+            `${otherGym.name} · ${this.formatPreviousPerformance(exercise, otherPrevious)}`,
+          );
+        }
         if (previous.length === 0) return;
         const fallback = previous[previous.length - 1];
-        this.setCache.set(
-          exercise.id,
-          Array.from({ length: exercise.sets }, (_, index) => {
-            const source = previous[index] ?? fallback;
-            return {
-              setNumber: index + 1,
-              weightKg: source.weightKg,
-              reps: source.reps,
-              rir: source.rir,
-              durationMinutes: source.durationMinutes ?? exercise.targetDurationMinutes ?? 0,
-              speedKmh: source.speedKmh ?? exercise.targetSpeedKmh ?? 0,
-              inclinePercent: source.inclinePercent ?? exercise.targetInclinePercent ?? 0,
-              completed: false,
-            };
-          }),
-        );
-        const latest = previous[0];
-        this.previousLabels.set(
-          exercise.id,
-          exercise.trackingMode === 'cardio'
-            ? `${latest.durationMinutes ?? 0} min · ${latest.speedKmh ?? 0} km/h · ${latest.inclinePercent ?? 0} %`
-            : exercise.trackingMode === 'duration'
-              ? `${latest.durationMinutes ?? 0} min`
-              : `${latest.weightKg} kg · ${previous.map((set) => set.reps).join(' / ')}`,
-        );
+        if (applyPreviousValues) {
+          this.setCache.set(
+            exercise.id,
+            Array.from({ length: exercise.sets }, (_, index) => {
+              const source = previous[index] ?? fallback;
+              return {
+                setNumber: index + 1,
+                weightKg: source.weightKg,
+                reps: source.reps,
+                rir: source.rir,
+                durationMinutes: source.durationMinutes ?? exercise.targetDurationMinutes ?? 0,
+                speedKmh: source.speedKmh ?? exercise.targetSpeedKmh ?? 0,
+                inclinePercent: source.inclinePercent ?? exercise.targetInclinePercent ?? 0,
+                completed: false,
+              };
+            }),
+          );
+        }
+        this.previousLabels.set(exercise.id, this.formatPreviousPerformance(exercise, previous));
       }),
     );
     this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
@@ -445,9 +510,34 @@ export class SessionPage implements OnDestroy {
   }
 
   private updatePreviousLabel(): void {
+    const exerciseId = this.activeExercise()?.id ?? '';
     this.previousPerformance.set(
-      this.previousLabels.get(this.activeExercise()?.id ?? '') ?? 'Aucune donnée locale',
+      this.previousLabels.get(exerciseId) ?? 'Aucune donnée dans cette salle',
     );
+    this.otherGymPerformance.set(this.otherGymLabels.get(exerciseId) ?? '');
+  }
+
+  private formatPreviousPerformance(
+    exercise: ExercisePrescription,
+    previous: readonly WorkoutSet[],
+  ): string {
+    const latest = previous[0];
+    if (!latest) return 'Aucune donnée';
+    if (exercise.trackingMode === 'cardio') {
+      return `${latest.durationMinutes ?? 0} min · ${latest.speedKmh ?? 0} km/h · ${latest.inclinePercent ?? 0} %`;
+    }
+    if (exercise.trackingMode === 'duration') return `${latest.durationMinutes ?? 0} min`;
+    return `${latest.weightKg} kg · ${previous.map((set) => set.reps).join(' / ')}`;
+  }
+
+  private resetSetCache(): void {
+    this.setCache.clear();
+    this.previousLabels.clear();
+    this.otherGymLabels.clear();
+    for (const exercise of this.day().exercises) {
+      this.setCache.set(exercise.id, this.createSets(exercise));
+    }
+    this.sets.set(this.setCache.get(this.activeExercise()?.id ?? '') ?? []);
   }
 
   private startRest(seconds: number): void {

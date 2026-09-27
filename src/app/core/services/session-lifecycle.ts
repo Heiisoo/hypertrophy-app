@@ -1,4 +1,4 @@
-import { SyncQueueItem, WorkoutSession, WorkoutSet } from '../models/training.models';
+import { GymId, SyncQueueItem, WorkoutSession, WorkoutSet } from '../models/training.models';
 
 export interface ActiveSessionResolution {
   readonly current: WorkoutSession | null;
@@ -51,6 +51,21 @@ export function setsFromCompletedSessions(
     sessions.filter((session) => session.status === 'completed').map((session) => session.id),
   );
   return sets.filter((set) => Boolean(set.completedAt) && completedIds.has(set.sessionId));
+}
+
+export function setsFromCompletedSessionsAtGym(
+  sessions: readonly WorkoutSession[],
+  sets: readonly WorkoutSet[],
+  gymId: GymId,
+): readonly WorkoutSet[] {
+  const gymSessionIds = new Set(
+    sessions
+      .filter(
+        (session) => session.status === 'completed' && (session.gymId ?? 'unspecified') === gymId,
+      )
+      .map((session) => session.id),
+  );
+  return sets.filter((set) => Boolean(set.completedAt) && gymSessionIds.has(set.sessionId));
 }
 
 export function pendingEntityKeys(items: readonly SyncQueueItem[]): ReadonlySet<string> {

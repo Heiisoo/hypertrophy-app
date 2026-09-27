@@ -118,10 +118,11 @@ export class SyncService {
           user_id: userId,
           exercise_key: note.exerciseKey,
           exercise_name: note.exerciseName,
+          gym_id: note.gymId ?? 'unspecified',
           note: note.content,
           updated_at: note.updatedAt,
         },
-        { onConflict: 'user_id,exercise_key' },
+        { onConflict: 'user_id,gym_id,exercise_key' },
       );
       if (error) throw error;
       return;
@@ -155,6 +156,7 @@ export class SyncService {
       id: session.id,
       user_id: userId,
       program_day_id: session.programDayId,
+      gym_id: session.gymId ?? 'unspecified',
       started_at: session.startedAt,
       finished_at: session.finishedAt ?? null,
       status: session.status,
@@ -212,6 +214,10 @@ export class SyncService {
               id: session.id,
               ownerId: userId,
               programDayId: session.program_day_id,
+              gymId:
+                session.gym_id === 'basic-fit' || session.gym_id === 'fitness-park'
+                  ? session.gym_id
+                  : 'unspecified',
               startedAt: session.started_at,
               finishedAt: session.finished_at ?? undefined,
               durationSeconds: session.duration_seconds ?? local?.durationSeconds,
@@ -253,6 +259,10 @@ export class SyncService {
               ownerId: userId,
               exerciseKey: note.exercise_key,
               exerciseName: note.exercise_name,
+              gymId:
+                note.gym_id === 'basic-fit' || note.gym_id === 'fitness-park'
+                  ? note.gym_id
+                  : 'unspecified',
               content: note.note,
               updatedAt: note.updated_at,
             };

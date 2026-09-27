@@ -2,6 +2,7 @@ export type TrainingDayKind = 'training' | 'recovery';
 export type SessionStatus = 'active' | 'completed' | 'abandoned';
 export type SyncStatus = 'pending' | 'synced' | 'failed';
 export type ExerciseTrackingMode = 'strength' | 'cardio' | 'duration' | 'checklist';
+export type GymId = 'basic-fit' | 'fitness-park' | 'unspecified';
 
 export interface ExercisePrescription {
   readonly id: string;
@@ -68,6 +69,7 @@ export interface WorkoutSession {
   readonly id: string;
   readonly ownerId: string;
   readonly programDayId: string;
+  readonly gymId?: GymId;
   readonly startedAt: string;
   readonly finishedAt?: string;
   readonly status: SessionStatus;
@@ -96,6 +98,7 @@ export interface ExerciseNote {
   readonly ownerId: string;
   readonly exerciseKey: string;
   readonly exerciseName: string;
+  readonly gymId?: GymId;
   readonly content: string;
   readonly updatedAt: string;
 }

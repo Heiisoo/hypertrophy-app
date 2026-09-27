@@ -128,6 +128,83 @@ app-session-page .recovery-tracking {
   border-radius: 15px;
   background: rgb(184 165 138 / 4%);
 }
+app-session-page .gym-selector {
+  display: grid;
+  gap: 11px;
+  margin: 19px 0 3px;
+  padding: 14px;
+  border: 1px solid rgb(184 165 138 / 17%);
+  border-radius: 16px;
+  background: rgb(184 165 138 / 4%);
+}
+app-session-page .gym-selector > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+app-session-page .gym-selector > div:first-child > strong {
+  color: var(--color-champagne);
+  font-size: 0.76rem;
+}
+app-session-page .gym-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+app-session-page .gym-options button,
+app-session-page .gym-selector.compact button {
+  min-height: 43px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 12px;
+  color: var(--color-muted);
+  background: rgb(0 0 0 / 16%);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+app-session-page .gym-options button.active,
+app-session-page .gym-selector.compact button.active {
+  border-color: rgb(184 165 138 / 45%);
+  color: var(--color-text);
+  background: linear-gradient(145deg, rgb(90 46 36 / 48%), rgb(26 25 26));
+}
+app-session-page .gym-options i {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  margin-right: 5px;
+  place-items: center;
+  border: 1px solid rgb(184 165 138 / 30%);
+  border-radius: 50%;
+  color: var(--color-champagne);
+  font-size: 0.55rem;
+  font-style: normal;
+}
+app-session-page .gym-selector > small {
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+app-session-page .gym-selector.compact {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 7px;
+  overflow-x: auto;
+}
+app-session-page .gym-selector.compact > span {
+  margin: 0 4px;
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+app-session-page .gym-selector.compact button {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
 app-session-page .day-picker-list button.recovery {
   border-color: rgb(184 165 138 / 18%);
 }

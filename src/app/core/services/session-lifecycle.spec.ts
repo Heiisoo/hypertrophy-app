@@ -6,6 +6,7 @@ import {
   pendingEntityKeys,
   resolveActiveSessions,
   setsFromCompletedSessions,
+  setsFromCompletedSessionsAtGym,
 } from './session-lifecycle';
 
 const session = (
@@ -93,6 +94,43 @@ describe('session lifecycle', () => {
     ];
 
     expect(setsFromCompletedSessions(sessions, sets).map((set) => set.id)).toEqual(['kept-set']);
+  });
+
+  it('keeps machine performances separated by gym', () => {
+    const basicFitSession = {
+      ...session('basic', 'completed', '2026-08-09T10:00:00.000Z'),
+      gymId: 'basic-fit' as const,
+    };
+    const fitnessParkSession = {
+      ...session('park', 'completed', '2026-08-10T10:00:00.000Z'),
+      gymId: 'fitness-park' as const,
+    };
+    const sets = [workoutSet('basic-set', 'basic', true), workoutSet('park-set', 'park', true)];
+
+    expect(
+      setsFromCompletedSessionsAtGym([basicFitSession, fitnessParkSession], sets, 'basic-fit').map(
+        (set) => set.id,
+      ),
+    ).toEqual(['basic-set']);
+    expect(
+      setsFromCompletedSessionsAtGym(
+        [basicFitSession, fitnessParkSession],
+        sets,
+        'fitness-park',
+      ).map((set) => set.id),
+    ).toEqual(['park-set']);
+  });
+
+  it('keeps legacy sessions under the unspecified gym', () => {
+    const legacySession = session('legacy', 'completed', '2026-08-09T10:00:00.000Z');
+
+    expect(
+      setsFromCompletedSessionsAtGym(
+        [legacySession],
+        [workoutSet('legacy-set', 'legacy', true)],
+        'unspecified',
+      ).map((set) => set.id),
+    ).toEqual(['legacy-set']);
   });
 
   it('protects pending and failed local entities from stale cloud responses', () => {
