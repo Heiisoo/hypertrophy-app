@@ -7,11 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { hypertrophyDb } from '../../core/database/hypertrophy.database';
-import { WorkoutSession, WorkoutSet } from '../../core/models/training.models';
+import { GymId, WorkoutSession, WorkoutSet } from '../../core/models/training.models';
 import { ProgramStore } from '../../core/services/program-store';
 import { WorkoutSessionService } from '../../core/services/workout-session.service';
 import { AuthStore } from '../../core/services/auth-store';
 import { setsFromCompletedSessions } from '../../core/services/session-lifecycle';
+import { GYM_OPTIONS, GymPreferenceService } from '../../core/services/gym-preference.service';
+
+type GymFilter = 'all' | GymId;
 
 @Component({
   selector: 'app-stats-page',
@@ -23,8 +26,24 @@ export class StatsPage {
   protected readonly store = inject(ProgramStore);
   protected readonly workout = inject(WorkoutSessionService);
   private readonly auth = inject(AuthStore);
-  protected readonly sessions = signal<readonly WorkoutSession[]>([]);
-  protected readonly sets = signal<readonly WorkoutSet[]>([]);
+  protected readonly gymPreference = inject(GymPreferenceService);
+  protected readonly gyms = GYM_OPTIONS;
+  protected readonly selectedGym = signal<GymFilter>('all');
+  private readonly allSessions = signal<readonly WorkoutSession[]>([]);
+  private readonly allSets = signal<readonly WorkoutSet[]>([]);
+  protected readonly hasUnspecifiedSessions = computed(() =>
+    this.allSessions().some((session) => (session.gymId ?? 'unspecified') === 'unspecified'),
+  );
+  protected readonly sessions = computed(() => {
+    const gymId = this.selectedGym();
+    return gymId === 'all'
+      ? this.allSessions()
+      : this.allSessions().filter((session) => (session.gymId ?? 'unspecified') === gymId);
+  });
+  protected readonly sets = computed(() => {
+    const sessionIds = new Set(this.sessions().map((session) => session.id));
+    return this.allSets().filter((set) => sessionIds.has(set.sessionId));
+  });
 
   protected readonly totalDurationSeconds = computed(() =>
     this.sessions().reduce((total, session) => total + (session.durationSeconds ?? 0), 0),
@@ -54,6 +73,10 @@ export class StatsPage {
     return (
       this.store.program().days.find((day) => day.id === programDayId)?.title ?? 'Séance libre'
     );
+  }
+
+  protected selectGym(gymId: GymFilter): void {
+    this.selectedGym.set(gymId);
   }
 
   protected formatDate(value: string): string {
@@ -88,7 +111,7 @@ export class StatsPage {
     sessions.sort((a, b) =>
       (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
     );
-    this.sessions.set(sessions);
-    this.sets.set(setsFromCompletedSessions(sessions, sets));
+    this.allSessions.set(sessions);
+    this.allSets.set(setsFromCompletedSessions(sessions, sets));
   }
 }

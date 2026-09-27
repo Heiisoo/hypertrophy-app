@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
-import { ExerciseNote } from '../models/training.models';
+import { ExerciseNote, GymId } from '../models/training.models';
 import { AuthStore } from './auth-store';
 import { SyncService } from './sync.service';
 
@@ -20,24 +20,32 @@ export class ExerciseNoteService {
     private readonly sync: SyncService,
   ) {}
 
-  async load(exerciseName: string): Promise<ExerciseNote | undefined> {
+  async load(exerciseName: string, gymId: GymId): Promise<ExerciseNote | undefined> {
     await this.auth.whenReady();
+    const ownerId = this.ownerId();
+    const exerciseKey = exerciseNoteKey(exerciseName);
+    const gymNote = await hypertrophyDb.exerciseNotes
+      .where('[ownerId+gymId+exerciseKey]')
+      .equals([ownerId, gymId, exerciseKey])
+      .first();
+    if (gymNote || gymId === 'unspecified') return gymNote;
     return hypertrophyDb.exerciseNotes
-      .where('[ownerId+exerciseKey]')
-      .equals([this.ownerId(), exerciseNoteKey(exerciseName)])
+      .where('[ownerId+gymId+exerciseKey]')
+      .equals([ownerId, 'unspecified', exerciseKey])
       .first();
   }
 
-  async save(exerciseName: string, content: string): Promise<ExerciseNote> {
+  async save(exerciseName: string, gymId: GymId, content: string): Promise<ExerciseNote> {
     await this.auth.whenReady();
     const ownerId = this.ownerId();
     const exerciseKey = exerciseNoteKey(exerciseName);
     const now = new Date().toISOString();
     const note: ExerciseNote = {
-      id: `${ownerId}:${exerciseKey}`,
+      id: `${ownerId}:${gymId}:${exerciseKey}`,
       ownerId,
       exerciseKey,
       exerciseName,
+      gymId,
       content: content.slice(0, 2000),
       updatedAt: now,
     };

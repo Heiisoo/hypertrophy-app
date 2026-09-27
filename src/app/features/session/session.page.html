@@ -53,6 +53,28 @@
       <h1>{{ day().title }}</h1>
       <p>{{ day().focus }}</p>
 
+      <section class="gym-selector" aria-labelledby="gym-selector-title">
+        <div>
+          <span class="eyebrow">Salle de cette séance</span>
+          <strong id="gym-selector-title">
+            {{ selectedGymId() ? selectedGymLabel() : 'Choisis ta salle' }}
+          </strong>
+        </div>
+        <div class="gym-options" role="group" aria-label="Choisir la salle">
+          @for (gym of gyms; track gym.id) {
+            <button
+              type="button"
+              [class.active]="selectedGymId() === gym.id"
+              (click)="selectGym(gym.id)"
+            >
+              <i>{{ selectedGymId() === gym.id ? '✓' : '' }}</i>
+              {{ gym.name }}
+            </button>
+          }
+        </div>
+        <small>Les poids, records et notes resteront séparés pour chaque salle.</small>
+      </section>
+
       <div class="start-metrics" aria-label="Résumé de la séance">
         <span
           ><strong>{{ day().exercises.length }}</strong>
@@ -70,7 +92,7 @@
       <button
         class="primary-button"
         type="button"
-        [disabled]="sessionStarting()"
+        [disabled]="sessionStarting() || !selectedGymId()"
         (click)="startSession()"
       >
         {{
@@ -81,12 +103,30 @@
               : 'Démarrer la séance'
         }}
       </button>
-      <small>Le chrono et l'enregistrement commencent uniquement après cet appui.</small>
+      <small>
+        @if (!selectedGymId()) {
+          Sélectionne d'abord la salle utilisée aujourd'hui.
+        } @else {
+          Le chrono et l'enregistrement commencent uniquement après cet appui.
+        }
+      </small>
     </article>
   } @else {
     <div class="session-title">
       <p class="eyebrow">Jour {{ day().dayNumber }} · {{ day().exercises.length }} exercices</p>
       <h1>{{ day().title }}</h1>
+      <div class="gym-selector compact" role="group" aria-label="Salle de la séance en cours">
+        <span>Salle</span>
+        @for (gym of gyms; track gym.id) {
+          <button
+            type="button"
+            [class.active]="selectedGymId() === gym.id"
+            (click)="selectGym(gym.id)"
+          >
+            {{ gym.name }}
+          </button>
+        }
+      </div>
       <div class="global-progress">
         <span
           [style.width.%]="
@@ -168,7 +208,7 @@
             [attr.aria-expanded]="noteExpanded()"
           >
             <span>
-              <strong>Ma note pour cet exercice</strong>
+              <strong>Ma note · {{ selectedGymLabel() }}</strong>
               <small>
                 @if (exerciseNote()) {
                   {{ exerciseNote() }}
@@ -206,9 +246,13 @@
         </section>
 
         <div class="previous-performance">
-          <span>Dernière performance</span>
+          <span>Dernière performance · {{ selectedGymLabel() }}</span>
           <strong>{{ previousPerformance() }}</strong>
-          <small>Les dernières valeurs sont préremplies automatiquement</small>
+          @if (otherGymPerformance()) {
+            <small>{{ otherGymPerformance() }}</small>
+          } @else {
+            <small>Les dernières valeurs de cette salle sont préremplies automatiquement</small>
+          }
         </div>
 
         @if (exercise.cue) {

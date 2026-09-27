@@ -1,16 +1,24 @@
-import { Injectable, effect, signal } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
-import { WorkoutSession, WorkoutSet } from '../models/training.models';
+import { GymId, WorkoutSession, WorkoutSet } from '../models/training.models';
 import { AuthStore } from './auth-store';
-import { setsFromCompletedSessions } from './session-lifecycle';
+import { setsFromCompletedSessions, setsFromCompletedSessionsAtGym } from './session-lifecycle';
+import { GymPreferenceService } from './gym-preference.service';
 
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
   readonly completedSessionCount = signal(0);
   readonly completedSessions = signal<readonly WorkoutSession[]>([]);
-  readonly bestSet = signal<WorkoutSet | null>(null);
+  private readonly bestSetsByGym = signal<Partial<Record<GymId, WorkoutSet>>>({});
+  readonly bestSet = computed(() => {
+    const gymId = this.gymPreference.selectedGymId();
+    return gymId ? (this.bestSetsByGym()[gymId] ?? null) : null;
+  });
 
-  constructor(private readonly auth: AuthStore) {
+  constructor(
+    private readonly auth: AuthStore,
+    private readonly gymPreference: GymPreferenceService,
+  ) {
     effect(() => {
       this.auth.user();
       void this.refresh();
@@ -35,20 +43,25 @@ export class HistoryService {
     this.completedSessions.set(sessions);
     this.completedSessionCount.set(sessions.length);
     const completedSets = setsFromCompletedSessions(sessions, sets);
-    this.bestSet.set(
-      completedSets
-        .filter((set) => set.weightKg > 0 && set.reps > 0)
-        .reduce<WorkoutSet | null>((best, current) => {
-          if (!best) return current;
-          const currentScore = current.weightKg * (1 + current.reps / 30);
-          const bestScore = best.weightKg * (1 + best.reps / 30);
-          return currentScore > bestScore ? current : best;
-        }, null),
+    const gymBySession = new Map(
+      sessions.map((session) => [session.id, session.gymId ?? 'unspecified'] as const),
     );
+    const bestSets: Partial<Record<GymId, WorkoutSet>> = {};
+    for (const set of completedSets.filter(
+      (candidate) => candidate.weightKg > 0 && candidate.reps > 0,
+    )) {
+      const gymId = gymBySession.get(set.sessionId) ?? 'unspecified';
+      const best = bestSets[gymId];
+      const currentScore = set.weightKg * (1 + set.reps / 30);
+      const bestScore = best ? best.weightKg * (1 + best.reps / 30) : -1;
+      if (!best || currentScore > bestScore) bestSets[gymId] = set;
+    }
+    this.bestSetsByGym.set(bestSets);
   }
 
   async previousSets(
     exerciseId: string,
+    gymId: GymId,
     excludedSessionId?: string,
   ): Promise<readonly WorkoutSet[]> {
     await this.auth.whenReady();
@@ -64,7 +77,7 @@ export class HistoryService {
         .filter((set) => set.sessionId !== excludedSessionId)
         .toArray(),
     ]);
-    const sets = [...setsFromCompletedSessions(sessions, candidateSets)];
+    const sets = [...setsFromCompletedSessionsAtGym(sessions, candidateSets, gymId)];
     sets.sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
     const latestSessionId = sets[0]?.sessionId;
     return latestSessionId

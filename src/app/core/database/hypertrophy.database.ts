@@ -63,6 +63,26 @@ export class HypertrophyDatabase extends Dexie {
       userPrograms: 'ownerId, updatedAt',
       exerciseNotes: 'id, ownerId, [ownerId+exerciseKey], updatedAt',
     });
+
+    this.version(5)
+      .stores({
+        programs: 'id, active, createdAt',
+        workoutSessions:
+          'id, ownerId, [ownerId+status], [ownerId+gymId], programDayId, gymId, startedAt, status',
+        workoutSets: 'id, ownerId, [ownerId+exerciseId], sessionId, exerciseId, completedAt',
+        syncQueue: '++id, ownerId, [ownerId+status], entityType, entityId, status, createdAt',
+        userPrograms: 'ownerId, updatedAt',
+        exerciseNotes:
+          'id, ownerId, [ownerId+exerciseKey], [ownerId+gymId+exerciseKey], gymId, updatedAt',
+      })
+      .upgrade(async (transaction) => {
+        await transaction.table<WorkoutSession, string>('workoutSessions').toCollection().modify({
+          gymId: 'unspecified',
+        });
+        await transaction.table<ExerciseNote, string>('exerciseNotes').toCollection().modify({
+          gymId: 'unspecified',
+        });
+      });
   }
 
   async seedIfNeeded(): Promise<void> {

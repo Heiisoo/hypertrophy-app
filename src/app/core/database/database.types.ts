@@ -88,6 +88,7 @@ export type Database = {
           created_at: string;
           exercise_key: string;
           exercise_name: string;
+          gym_id: string;
           id: string;
           note: string;
           updated_at: string;
@@ -97,6 +98,7 @@ export type Database = {
           created_at?: string;
           exercise_key: string;
           exercise_name: string;
+          gym_id?: string;
           id: string;
           note?: string;
           updated_at?: string;
@@ -106,6 +108,7 @@ export type Database = {
           created_at?: string;
           exercise_key?: string;
           exercise_name?: string;
+          gym_id?: string;
           id?: string;
           note?: string;
           updated_at?: string;
@@ -255,6 +258,7 @@ export type Database = {
           created_at: string;
           duration_seconds: number | null;
           finished_at: string | null;
+          gym_id: string;
           id: string;
           notes: string | null;
           program_day_id: string;
@@ -267,6 +271,7 @@ export type Database = {
           created_at?: string;
           duration_seconds?: number | null;
           finished_at?: string | null;
+          gym_id?: string;
           id: string;
           notes?: string | null;
           program_day_id: string;
@@ -279,6 +284,7 @@ export type Database = {
           created_at?: string;
           duration_seconds?: number | null;
           finished_at?: string | null;
+          gym_id?: string;
           id?: string;
           notes?: string | null;
           program_day_id?: string;

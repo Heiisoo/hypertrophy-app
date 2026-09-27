@@ -5,6 +5,29 @@
     <p>Des chiffres utiles, calculés à partir de tes séances terminées.</p>
   </header>
 
+  <section class="gym-filter" aria-label="Filtrer les statistiques par salle">
+    <span class="eyebrow">Afficher</span>
+    <div>
+      <button type="button" [class.active]="selectedGym() === 'all'" (click)="selectGym('all')">
+        Toutes les salles
+      </button>
+      @for (gym of gyms; track gym.id) {
+        <button type="button" [class.active]="selectedGym() === gym.id" (click)="selectGym(gym.id)">
+          {{ gym.name }}
+        </button>
+      }
+      @if (hasUnspecifiedSessions()) {
+        <button
+          type="button"
+          [class.active]="selectedGym() === 'unspecified'"
+          (click)="selectGym('unspecified')"
+        >
+          Anciennes séances
+        </button>
+      }
+    </div>
+  </section>
+
   <section class="summary-grid" aria-label="Résumé des statistiques">
     <article class="surface-card featured">
       <span>Cette semaine</span>
@@ -61,7 +84,10 @@
           <article class="surface-card">
             <div>
               <strong>{{ dayTitle(session.programDayId) }}</strong>
-              <span>{{ formatDate(session.finishedAt ?? session.startedAt) }}</span>
+              <span>
+                {{ formatDate(session.finishedAt ?? session.startedAt) }} ·
+                {{ gymPreference.label(session.gymId) }}
+              </span>
             </div>
             <strong>{{ formatDuration(session.durationSeconds ?? 0) }}</strong>
           </article>

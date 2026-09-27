@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy, computed, effect, signal } from '@angular/core';
 import { hypertrophyDb } from '../database/hypertrophy.database';
-import { WorkoutSession } from '../models/training.models';
+import { GymId, WorkoutSession } from '../models/training.models';
 import { HistoryService } from './history.service';
 import { SyncService } from './sync.service';
 import { AuthStore } from './auth-store';
@@ -57,15 +57,18 @@ export class WorkoutSessionService implements OnDestroy {
     await this.hydration;
   }
 
-  async start(programDayId: string): Promise<WorkoutSession> {
+  async start(programDayId: string, gymId: Exclude<GymId, 'unspecified'>): Promise<WorkoutSession> {
     if (this.startPromise) return this.startPromise;
-    this.startPromise = this.createOrReuseSession(programDayId).finally(() => {
+    this.startPromise = this.createOrReuseSession(programDayId, gymId).finally(() => {
       this.startPromise = undefined;
     });
     return this.startPromise;
   }
 
-  private async createOrReuseSession(programDayId: string): Promise<WorkoutSession> {
+  private async createOrReuseSession(
+    programDayId: string,
+    gymId: Exclude<GymId, 'unspecified'>,
+  ): Promise<WorkoutSession> {
     await this.hydration;
     const current = this.activeSession();
     if (current) return current;
@@ -86,6 +89,7 @@ export class WorkoutSessionService implements OnDestroy {
       id: `session-${crypto.randomUUID()}`,
       ownerId,
       programDayId,
+      gymId,
       startedAt: now,
       status: 'active',
       accumulatedPausedSeconds: 0,
@@ -95,6 +99,16 @@ export class WorkoutSessionService implements OnDestroy {
     this.clock.set(Date.now());
     await this.sync.notifyQueueChanged();
     return session;
+  }
+
+  async changeGym(gymId: Exclude<GymId, 'unspecified'>): Promise<WorkoutSession | null> {
+    const session = this.activeSession();
+    if (!session || session.gymId === gymId) return session;
+    const updated = { ...session, gymId };
+    await this.persistSession(updated);
+    this.activeSession.set(updated);
+    await this.sync.notifyQueueChanged();
+    return updated;
   }
 
   async togglePause(): Promise<void> {
@@ -123,10 +137,7 @@ export class WorkoutSessionService implements OnDestroy {
     if (!session) return null;
 
     const finishedAt = new Date().toISOString();
-    const durationSeconds = calculateWorkoutElapsedSeconds(
-      session,
-      new Date(finishedAt).getTime(),
-    );
+    const durationSeconds = calculateWorkoutElapsedSeconds(session, new Date(finishedAt).getTime());
     const completed = completeSession(session, finishedAt, durationSeconds);
 
     await this.persistSession(completed);
@@ -141,10 +152,7 @@ export class WorkoutSessionService implements OnDestroy {
     if (!session) return null;
 
     const finishedAt = new Date().toISOString();
-    const durationSeconds = calculateWorkoutElapsedSeconds(
-      session,
-      new Date(finishedAt).getTime(),
-    );
+    const durationSeconds = calculateWorkoutElapsedSeconds(session, new Date(finishedAt).getTime());
     const abandoned = abandonSession(session, finishedAt, durationSeconds);
     await this.persistSession(abandoned);
     this.activeSession.set(null);
